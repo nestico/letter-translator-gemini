@@ -89,12 +89,12 @@ The Supabase **Free Tier** includes only **1GB** of file storage.
 ### **Architecture**
 ```mermaid
 graph TD
-    User_India((User - India)) -->|Edge Network| Vercel[Vercel CDN]
+    User_India((User - India)) -->|Edge Network| Vercel["Vercel (Frontend)<br/>React + TypeScript"]
     User_Africa((User - Africa)) -->|Edge Network| Vercel
     
-    Vercel -->|Auth/Data| Supabase["Supabase<br/>(PostgreSQL + Auth)"]
+    Vercel -->|Auth/Data| Supabase["Supabase (Backend)<br/>PostgreSQL + Auth"]
     
-    Vercel -->|API| Azure["Azure OpenAI<br/>(GPT-4o Resource)"]
+    Vercel -->|API| Azure["Azure OpenAI (AI Engine)<br/>Model: GPT-4o<br/>Langs: English, Spanish, French, Telugu, Tamil"]
     
     subgraph "Supabase Storage"
         Pro_Tier["Pro Plan ($25/mo)<br/>Stores Letter Images"]
