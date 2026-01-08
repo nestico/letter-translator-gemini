@@ -1,0 +1,5 @@
+{
+  "name": "Letter Translator",
+  "description": "A secure, AI-powered web application to transcribe and translate handwritten letters using Gemini. Features authentication-gated access and an integrated chatbot.",
+  "requestFramePermissions": []
+}
