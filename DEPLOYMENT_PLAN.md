@@ -92,12 +92,12 @@ graph TD
     User_India((User - India)) -->|Edge Network| Vercel[Vercel CDN]
     User_Africa((User - Africa)) -->|Edge Network| Vercel
     
-    Vercel -->|Auth/Data| Supabase["Supabase\n(PostgreSQL + Auth)"]
+    Vercel -->|Auth/Data| Supabase["Supabase<br/>(PostgreSQL + Auth)"]
     
-    Vercel -->|API| Azure["Azure OpenAI\n(GPT-4o Resource)"]
+    Vercel -->|API| Azure["Azure OpenAI<br/>(GPT-4o Resource)"]
     
     subgraph "Supabase Storage"
-        Pro_Tier["Pro Plan ($25/mo)\nStores Letter Images"]
+        Pro_Tier["Pro Plan ($25/mo)<br/>Stores Letter Images"]
     end
     Supabase --> Pro_Tier
 ```
