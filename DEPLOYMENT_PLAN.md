@@ -160,7 +160,41 @@ Use these prompts in Google NotebookLM (or ChatGPT/Gemini) to generate a profess
 
 ---
 
-## 6. Custom Domain Configuration
+## 6. Security, Privacy & Data Residency
+
+Given the sensitivity of collecting data from children, this architecture prioritizes **security, privacy, and compliance** at every layer.
+
+### **A. Data Residency (Canada/Global)**
+*   **Database & Storage (Supabase)**:
+    *   **Recommendation**: Select the **Canada (Central)** region (`ca-central-1`) when creating your Supabase project.
+    *   **Benefit**: Ensures all beneficiary data (names, IDs, letters) remains hosted on servers physically located in Canada, aligning with Canadian data sovereignty preferences for a `.ca` organization.
+    *   *Alternative*: US East (N. Virginia) is also available if preferred, but Canada is recommended for compliance.
+
+### **B. Database Security Measures**
+*   **Row-Level Security (RLS)**:
+    *   **Implemented**: We strictly enforce RLS policies.
+    *   **Mechanism**: A user **CANNOT** query or view another user's uploads. The database rejects unauthorized requests at the engine level.
+    *   **Authentication**: Integrated with Supabase Auth (JWT tokens) ensuring only valid, logged-in personnel can access the API.
+*   **Encryption**:
+    *   **At Rest**: All data allowed in the database and storage buckets is encrypted on disk (AES-256).
+    *   **In Transit**: All traffic between the App, Supabase, and Azure is encrypted via TLS/SSL (HTTPS).
+
+### **C. AI Privacy (Azure OpenAI)**
+*   **Zero Data Training**:
+    *   **Policy**: Microsoft's Azure OpenAI Service strictly guarantees that **customer data is NOT used to train or improve their foundation models** (unlike the consumer ChatGPT).
+    *   **Privacy**: The letters sent to the AI for translation are processed in memory and discarded (stateless). They do not become part of the public knowledge base.
+*   **Content Filtering**:
+    *   **Safety**: Azure includes built-in content filtering to detect and block hate speech, violence, or sexual content, ensuring safe operation.
+
+### **D. Recommended Additional Measures**
+*   **Data Retention Policy**:
+    *   Configure Supabase Storage objects to **auto-expire** after 30-90 days if long-term history is not legally required.
+*   **Audit Logs**:
+    *   Enable Supabase Access Logs to track who accessed which records and when (available on Pro Plan).
+
+---
+
+## 7. Custom Domain Configuration
 
 You requested using the subdomain: **`letter-app.childrenbelieve.ca`**.
 **Yes, this is fully supported and recommended.**
