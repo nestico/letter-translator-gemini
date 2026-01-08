@@ -157,3 +157,29 @@ Use these prompts in Google NotebookLM (or ChatGPT/Gemini) to generate a profess
 > - **Data Storage**: Images stored in secure, private buckets (RLS policies enforced).
 > - **AI Privacy**: We use Azure OpenAI Service, which guarantees that **our data is NOT used to train OpenAI's public models**. This ensures beneficiary privacy.
 > - **Access Control**: Role-Based User Access (users only see their own translations)."
+
+---
+
+## 6. Custom Domain Configuration
+
+You requested using the subdomain: **`letter-app.childrenbelieve.ca`**.
+**Yes, this is fully supported and recommended.**
+
+### **Integration Procedure (For IT Team)**
+
+1.  **Vercel Configuration**:
+    - In your Vercel Project Dashboard, go to **Settings > Domains**.
+    - Add `letter-app.childrenbelieve.ca`.
+    - Vercel will provide a **Value** specifically for your project (e.g., `cname.vercel-dns.com`).
+
+2.  **DNS Update (at childrenbelieve.ca provider)**:
+    - Your IT team needs to access the DNS settings for `childrenbelieve.ca`.
+    - **Add a CNAME Record**:
+        - **Type**: `CNAME`
+        - **Name/Host**: `letter-app` (this creates the subdomain part)
+        - **Value/Target**: `cname.vercel-dns.com` (Use the exact value Vercel gives you).
+
+3.  **Result**:
+    - Users can visit `https://letter-app.childrenbelieve.ca`.
+    - Vercel automatically issues and renews a **Free SSL Certificate** (HTTPS) for this subdomain.
+    - No manual server configuration is required.
