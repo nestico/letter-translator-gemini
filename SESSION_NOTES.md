@@ -53,3 +53,21 @@
         - Created `HistoryView.tsx` to display a list of past translations with a detailed view modal.
         - Integrated `saveTranslation` into `TranslationView.tsx` to automatically save successful translations.
         - Updated `App.tsx` and `Navbar.tsx` to include navigation to the History page for authenticated users.
+
+### 6. Deployment Strategy & Cost Analysis
+- **Objective**: Prepare for production deployment for ~20 users in Africa, India, and Central America.
+- **Outcome**: Created `DEPLOYMENT_PLAN.md`.
+- **Key Decisions**:
+    - **Frontend**: Recommend **Vercel** (Global Edge Network) for performance in target regions vs Hostinger VPS.
+    - **Backend**: **Supabase Pro** ($25/mo) required for storage (100GB) given the volume of image uploads (~1.5GB/month).
+    - **Custom Domain**: Configured plan for `letter-app.childrenbelieve.ca`.
+    - **Presentation**: Generated executive presentation prompts for IT management.
+
+### 7. Branding & Localization
+- **Branding**:
+    - Integrated **Children Believe Logo** into the PDF export header.
+    - Updated PDF footer to "Translated by Children Believe AI".
+    - Added "Child ID" header extraction to PDF.
+- **Localization**:
+    - **Language Priorities**: Reordered language dropdown to prioritize **Spanish, French, English, Telugu, Tamil**.
+    - **Verification**: Confirmed Azure OpenAI support for Telugu and Tamil.

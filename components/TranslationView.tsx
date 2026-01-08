@@ -27,7 +27,7 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, image, f
    const [activeTab, setActiveTab] = useState<'transcription' | 'translation'>('translation');
 
    const LANGUAGES = [
-      'Auto-Detect', 'English', 'Spanish', 'French', 'German', 'Italian', 'Portuguese', 'Latin', 'Dutch', 'Russian', 'Chinese', 'Japanese'
+      'Auto-Detect', 'Spanish', 'French', 'English', 'Telugu', 'Tamil', 'German', 'Italian', 'Portuguese', 'Latin', 'Dutch', 'Russian', 'Chinese', 'Japanese'
    ];
 
    const handleProcessStart = () => {
@@ -101,6 +101,23 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, image, f
       setShowExportModal(true);
    };
 
+
+   // Helper to load image for PDF - defined outside or inside? Inside is fine if simple.
+   const loadLogo = async (): Promise<string | null> => {
+      try {
+         const response = await fetch('/logo.png');
+         const blob = await response.blob();
+         return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+         });
+      } catch (e) {
+         console.warn("Could not load logo for PDF", e);
+         return null;
+      }
+   };
+
    const handleExportConfirm = async () => {
       if (!editedResult) return;
 
@@ -129,6 +146,15 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, image, f
             const contentWidth = pageWidth - (margin * 2);
             let y = 20;
 
+            // --- HEADER WITH LOGO ---
+            const logoBase64 = await loadLogo();
+            if (logoBase64) {
+               const logoW = 30; // Width in mm
+               const logoH = 30; // Aspect ratio check? simple square for now or auto
+               // Place logo at top right
+               pdfDoc.addImage(logoBase64, 'PNG', pageWidth - margin - logoW, 10, logoW, logoH);
+            }
+
             // --- 1. Original Image ---
             // We need to read the file again to base64 if it's not available, 
             // but we can trust the 'image' prop if it's a data URI. 
@@ -156,8 +182,8 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, image, f
             let finalImgWidth = contentWidth;
             let finalImgHeight = contentWidth / imgRatio;
 
-            // Allow image to take up to 65% of the page height now (bigger than before)
-            const maxHeight = pageHeight * 0.65;
+            // Allow image to take up to 60% of the page height now (slightly smaller to fit header)
+            const maxHeight = pageHeight * 0.60;
             if (finalImgHeight > maxHeight) {
                finalImgHeight = maxHeight;
                finalImgWidth = maxHeight * imgRatio;
@@ -166,17 +192,19 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, image, f
             // Center image
             const xOffset = margin + ((contentWidth - finalImgWidth) / 2);
 
-            // Add ID Header above image
+            // Add ID Header above image (Top Left)
             const imageId = file.name.replace(/\.[^/.]+$/, ""); // remove extension
-            pdfDoc.setFontSize(12);
+            pdfDoc.setFontSize(14);
             pdfDoc.setFont("helvetica", "bold");
             pdfDoc.setTextColor(0);
-            pdfDoc.text(`ID: ${imageId}`, margin, y);
-            y += 10;
+            pdfDoc.text(`Child ID: ${imageId}`, margin, y + 10);
+
+            // Adjust Y to be below header/logo area
+            y = 50;
 
             pdfDoc.addImage(imgData, imgType === 'image/png' ? 'PNG' : 'JPEG', xOffset, y, finalImgWidth, finalImgHeight);
 
-            y += finalImgHeight + 20;
+            y += finalImgHeight + 15;
 
             // Ensure we have space for translation start
             if (y > pageHeight - 40) {
@@ -185,33 +213,21 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, image, f
             }
 
             // --- 2. Translation ---
-            // Clean, simple layout matching the reference
             pdfDoc.setFontSize(12);
             pdfDoc.setFont("helvetica", "normal");
             pdfDoc.setTextColor(0); // Black text
-
-            // Simple ID or Header if needed, but user asked to remove title. 
-            // The reference image has "ID 01157711" at top, but user said "remove the title Letter Translation".
-            // I will strictly just put the translation text for now as requested "only keep it the english traslation".
-
-            // Add a small spacer/separator or just start text?
-            // Reference shows text closely following. 
 
             const splitTranslation = pdfDoc.splitTextToSize(editedResult.translation, contentWidth);
 
             splitTranslation.forEach((line: string) => {
                if (y > pageHeight - 20) {
                   pdfDoc.addPage();
+                  // Re-add logo on new pages? Optional. Let's keep it simple for now.
                   y = 20;
                }
                pdfDoc.text(line, margin, y);
-               y += 7; // slightly more line spacing for readability
+               y += 7;
             });
-
-            // Add footer/signature like "Translated by Lilian Aguero" from reference? 
-            // User didn't explicitly ask for a specific footer content, just "make look like the image".
-            // The image has a date and "Translated by...".
-            // I'll add the current date and a generic footer for professional look if space permits.
 
             y += 10;
             if (y > pageHeight - 20) {
@@ -227,7 +243,7 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, image, f
             if (user?.name) {
                pdfDoc.text(`Translated by ${user.name}`, margin, y);
             } else {
-               pdfDoc.text(`Translated by Letter Translator AI`, margin, y);
+               pdfDoc.text(`Translated by Children Believe AI`, margin, y);
             }
 
          } catch (e) {
@@ -303,6 +319,7 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, image, f
          alert("An error occurred while exporting.");
       }
    };
+
 
    return (
       <div className="w-full max-w-[1280px] px-4 lg:px-10 py-8 flex flex-col gap-8 min-h-[calc(100vh-64px)]">
