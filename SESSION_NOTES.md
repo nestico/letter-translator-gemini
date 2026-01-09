@@ -71,3 +71,32 @@
 - **Localization**:
     - **Language Priorities**: Reordered language dropdown to prioritize **Spanish, French, English, Telugu, Tamil**.
     - **Verification**: Confirmed Azure OpenAI support for Telugu and Tamil.
+
+# Session Notes - Jan 9, 2026
+
+### 8. Multi-Image Support & Translation Accuracy
+- **Objective**: Allow translating letters that span multiple pages (e.g., front and back) and improve translation quality for mixed-content documents.
+- **Changes**:
+    - **Frontend (UploadView)**: 
+        - Enabled uploading up to **3 images** per session.
+        - Implemented **custom image ordering** with "Move Up/Down" functionality to ensure correct page sequence in updates.
+        - Refined the UI to maintain the simple "Take Photo / Select Gallery" layout while conditionally showing the page management list.
+    - **Dual Flow**: 
+        - Users can process a single image quickly (Standard Flow).
+        - Users can process multiple images as a continuous document (Advanced Flow).
+
+### 9. PDF Reporting Enhancements (Multi-Page)
+- **Problem**: Images were appearing in random order or confusing the reader.
+- **Solution**:
+    - The PDF export now strictly follows the user-defined order.
+    - Added explicit labeling (e.g., "Page 1 of X") in the PDF.
+    - Translation results are appended *after* all original image pages have been displayed.
+
+### 10. AI Prompt Engineering & Accuracy
+- **Issue**: The AI was sometimes outputting generic "polite" summaries instead of translating the actual handwritten content, or failing to detect languages like Telugu when mixed with English form text.
+- **Solution**: 
+    - **Prompt Enhancement**: Updated `azureService.ts` to explicitly instruct the model to:
+        - Prioritize **handwritten text** over printed boilerplate.
+        - Extract **factual details** (names, dates, festivals) and avoid generic summarization.
+        - Ignore English form headers when detecting the primary language of the letter.
+    - **Result**: Significant improvement in translating specific details from handwritten Telugu/mixed letters.

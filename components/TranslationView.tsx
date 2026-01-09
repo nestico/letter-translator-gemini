@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { translateImage } from '../services/azureService';
 import { User, TranslationResult } from '../types';
 import { logActivity } from '../services/activity';
@@ -7,12 +7,11 @@ import { jsPDF } from 'jspdf';
 
 interface TranslationViewProps {
    user: User | null;
-   image: string;
-   file: File;
+   images: { url: string; file: File }[]; // Changed prop
    onReset: () => void;
 }
 
-export const TranslationView: React.FC<TranslationViewProps> = ({ user, image, file, onReset }) => {
+export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, onReset }) => {
    const [result, setResult] = useState<TranslationResult | null>(null);
    const [editedResult, setEditedResult] = useState<TranslationResult | null>(null);
    const [isProcessing, setIsProcessing] = useState(false);
@@ -25,9 +24,17 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, image, f
    const [targetLanguage, setTargetLanguage] = useState('English');
    const [error, setError] = useState<string | null>(null);
    const [activeTab, setActiveTab] = useState<'transcription' | 'translation'>('translation');
+   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+   const [translatorName, setTranslatorName] = useState(user?.name || 'Children Believe AI');
+
+   useEffect(() => {
+      if (user?.name) {
+         setTranslatorName(user.name);
+      }
+   }, [user]);
 
    const LANGUAGES = [
-      'Auto-Detect', 'Spanish', 'French', 'English', 'Telugu', 'Tamil', 'German', 'Italian', 'Portuguese', 'Latin', 'Dutch', 'Russian', 'Chinese', 'Japanese'
+      'Auto-Detect', 'Spanish', 'French', 'English', 'Telugu', 'Tamil', 'German', 'Italian', 'Portuguese', 'Latin', 'Dutch', 'Russian', 'Chinese', 'Japanese', 'Amharic', 'Afan Oromo'
    ];
 
    const handleProcessStart = () => {
@@ -37,44 +44,40 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, image, f
    const handleProcessConfirmed = async () => {
       setShowLanguageConfirm(false);
       setError(null);
-      if (!file) return;
+      if (images.length === 0) return;
 
       console.log("Starting processing...");
       setIsProcessing(true);
       try {
-         // Read file to base64
-         console.log("Reading file...");
-         const reader = new FileReader();
-         reader.readAsDataURL(file);
+         // Read all files to base64
+         const imagesContent = await Promise.all(images.map(async (img) => {
+            return new Promise<{ base64: string, mimeType: string }>((resolve, reject) => {
+               const reader = new FileReader();
+               reader.onload = () => {
+                  const result = reader.result as string;
+                  const base64 = result.split(',')[1];
+                  resolve({ base64, mimeType: img.file.type });
+               };
+               reader.onerror = reject;
+               reader.readAsDataURL(img.file);
+            });
+         }));
 
-         const base64Promise = new Promise<{ base64Data: string, mimeType: string }>((resolve, reject) => {
-            reader.onload = () => {
-               const result = reader.result as string;
-               const base64Data = result.split(',')[1];
-               const mimeType = file.type;
-               resolve({ base64Data, mimeType });
-            };
-            reader.onerror = (err) => {
-               console.error("File reading error:", err);
-               reject(err);
-            };
-         });
-
-         const { base64Data, mimeType } = await base64Promise;
-         const data = await translateImage(base64Data, mimeType, selectedLanguage, targetLanguage);
+         const data = await translateImage(imagesContent, selectedLanguage, targetLanguage);
          setResult(data);
          setEditedResult(data);
 
          if (user) {
             logActivity(user.id, 'TRANSLATE_LETTER', {
                language: data.detectedLanguage,
-               confidence: data.confidenceScore
+               confidence: data.confidenceScore,
+               pages: images.length
             });
 
-            // Save to history
+            // Save to history (using first file name as reference)
             saveTranslation(
                user.id,
-               file.name,
+               images[0].file.name, // Use first file
                data.transcription,
                data.translation,
                data.detectedLanguage || selectedLanguage,
@@ -102,7 +105,16 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, image, f
    };
 
 
-   // Helper to load image for PDF - defined outside or inside? Inside is fine if simple.
+   // Helper to load image for PDF
+   const loadImageBase64 = async (file: File): Promise<{ data: string, type: string }> => {
+      return new Promise((resolve, reject) => {
+         const reader = new FileReader();
+         reader.onload = () => resolve({ data: reader.result as string, type: file.type });
+         reader.onerror = reject;
+         reader.readAsDataURL(file);
+      });
+   };
+
    const loadLogo = async (): Promise<string | null> => {
       try {
          const response = await fetch('/logo.png');
@@ -124,7 +136,7 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, image, f
       let fileName = exportFileName.trim();
       if (!fileName) fileName = 'letter_translation';
 
-      // Harsh sanitization to be safe: alphanumeric, dashes, underscores only
+      // Harsh sanitization
       fileName = fileName.replace(/[^a-zA-Z0-9\-_]/g, '_');
 
       const isPdf = exportFormat === 'pdf';
@@ -144,85 +156,75 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, image, f
             const pageWidth = pdfDoc.internal.pageSize.getWidth();
             const pageHeight = pdfDoc.internal.pageSize.getHeight();
             const contentWidth = pageWidth - (margin * 2);
+
+            const logoBase64 = await loadLogo();
+
+            // Loop through all images
+            for (let i = 0; i < images.length; i++) {
+               if (i > 0) pdfDoc.addPage();
+
+               let y = 20;
+
+               // --- HEADER WITH LOGO ---
+               if (logoBase64) {
+                  const logoW = 30;
+                  const logoH = 30;
+                  pdfDoc.addImage(logoBase64, 'PNG', pageWidth - margin - logoW, 10, logoW, logoH);
+               }
+
+               // --- Original Image ---
+               const { data: imgData, type: imgType } = await loadImageBase64(images[i].file);
+
+               // Calculate numeric aspect ratio
+               const imgObj = new Image();
+               imgObj.src = imgData;
+               await new Promise((resolve) => { imgObj.onload = resolve; });
+
+               const imgProps = pdfDoc.getImageProperties(imgData);
+               const imgRatio = imgProps.width / imgProps.height;
+
+               let finalImgWidth = contentWidth;
+               let finalImgHeight = contentWidth / imgRatio;
+
+               // Allow image to take up to 60% of the page height
+               const maxHeight = pageHeight * 0.60;
+               if (finalImgHeight > maxHeight) {
+                  finalImgHeight = maxHeight;
+                  finalImgWidth = maxHeight * imgRatio;
+               }
+
+               // Center image
+               const xOffset = margin + ((contentWidth - finalImgWidth) / 2);
+
+               // Add ID Header above image
+               const imageId = images[i].file.name.replace(/\.[^/.]+$/, "");
+               pdfDoc.setFontSize(14);
+               pdfDoc.setFont("helvetica", "bold");
+               pdfDoc.setTextColor(0);
+               pdfDoc.text(`Child ID: ${imageId} (Page ${i + 1})`, margin, y + 10);
+
+               y = 50;
+
+               pdfDoc.addImage(imgData, imgType.includes('png') ? 'PNG' : 'JPEG', xOffset, y, finalImgWidth, finalImgHeight);
+
+               // Only add translation on the LAST page? Or start new page?
+               // Request said "add them to the output pdf" (images).
+               // Let's add translation after the LAST image, on a new page.
+            }
+
+            // --- Translation on New Page ---
+            pdfDoc.addPage();
             let y = 20;
 
-            // --- HEADER WITH LOGO ---
-            const logoBase64 = await loadLogo();
-            if (logoBase64) {
-               const logoW = 30; // Width in mm
-               const logoH = 30; // Aspect ratio check? simple square for now or auto
-               // Place logo at top right
-               pdfDoc.addImage(logoBase64, 'PNG', pageWidth - margin - logoW, 10, logoW, logoH);
-            }
-
-            // --- 1. Original Image ---
-            // We need to read the file again to base64 if it's not available, 
-            // but we can trust the 'image' prop if it's a data URI. 
-            // However, 'image' prop might be a blob url if set from file?
-            // Let's safe-read the file prop again which we know is a File object.
-
-            // Note: reading file is async, but we are in an async function.
-            const reader = new FileReader();
-            const imagePromise = new Promise<{ data: string, type: string }>((resolve, reject) => {
-               reader.onload = () => resolve({ data: reader.result as string, type: file.type });
-               reader.onerror = reject;
-               reader.readAsDataURL(file);
-            });
-
-            const { data: imgData, type: imgType } = await imagePromise;
-
-            // Calculate numeric aspect ratio
-            const imgObj = new Image();
-            imgObj.src = imgData;
-            await new Promise((resolve) => { imgObj.onload = resolve; });
-
-            const imgProps = pdfDoc.getImageProperties(imgData);
-            const imgRatio = imgProps.width / imgProps.height;
-
-            let finalImgWidth = contentWidth;
-            let finalImgHeight = contentWidth / imgRatio;
-
-            // Allow image to take up to 60% of the page height now (slightly smaller to fit header)
-            const maxHeight = pageHeight * 0.60;
-            if (finalImgHeight > maxHeight) {
-               finalImgHeight = maxHeight;
-               finalImgWidth = maxHeight * imgRatio;
-            }
-
-            // Center image
-            const xOffset = margin + ((contentWidth - finalImgWidth) / 2);
-
-            // Add ID Header above image (Top Left)
-            const imageId = file.name.replace(/\.[^/.]+$/, ""); // remove extension
-            pdfDoc.setFontSize(14);
-            pdfDoc.setFont("helvetica", "bold");
-            pdfDoc.setTextColor(0);
-            pdfDoc.text(`Child ID: ${imageId}`, margin, y + 10);
-
-            // Adjust Y to be below header/logo area
-            y = 50;
-
-            pdfDoc.addImage(imgData, imgType === 'image/png' ? 'PNG' : 'JPEG', xOffset, y, finalImgWidth, finalImgHeight);
-
-            y += finalImgHeight + 15;
-
-            // Ensure we have space for translation start
-            if (y > pageHeight - 40) {
-               pdfDoc.addPage();
-               y = 20;
-            }
-
-            // --- 2. Translation ---
             pdfDoc.setFontSize(12);
             pdfDoc.setFont("helvetica", "normal");
-            pdfDoc.setTextColor(0); // Black text
+            pdfDoc.setTextColor(0);
 
             const splitTranslation = pdfDoc.splitTextToSize(editedResult.translation, contentWidth);
 
             splitTranslation.forEach((line: string) => {
                if (y > pageHeight - 20) {
                   pdfDoc.addPage();
-                  // Re-add logo on new pages? Optional. Let's keep it simple for now.
                   y = 20;
                }
                pdfDoc.text(line, margin, y);
@@ -240,11 +242,7 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, image, f
             pdfDoc.setFontSize(10);
             pdfDoc.text(dateStr, margin, y);
             y += 6;
-            if (user?.name) {
-               pdfDoc.text(`Translated by ${user.name}`, margin, y);
-            } else {
-               pdfDoc.text(`Translated by Children Believe AI`, margin, y);
-            }
+            pdfDoc.text(`Translated by ${translatorName || 'Children Believe AI'}`, margin, y);
 
          } catch (e) {
             console.error(e);
@@ -277,19 +275,17 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, image, f
             if (isPdf && pdfDoc) {
                await writable.write(pdfDoc.output('blob'));
             } else {
-               await writable.write(textContent); // Text strings are auto-converted to UTF-8
+               await writable.write(textContent);
             }
 
             await writable.close();
             setShowExportModal(false);
-            return; // Success!
+            return;
          }
       } catch (err: any) {
-         // User cancelled or not supported
          if (err.name !== 'AbortError') {
             console.warn("File System Access API failed, falling back:", err);
          } else {
-            // User intentionally cancelled the save dialog, so we stop here.
             return;
          }
       }
@@ -307,7 +303,6 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, image, f
             link.download = fileName;
             document.body.appendChild(link);
             link.click();
-            // Small timeout to ensure event fires before removal
             setTimeout(() => {
                document.body.removeChild(link);
                URL.revokeObjectURL(url);
@@ -320,6 +315,8 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, image, f
       }
    };
 
+   // Check bounds
+   const currentImage = images[currentImageIndex];
 
    return (
       <div className="w-full max-w-[1280px] px-4 lg:px-10 py-8 flex flex-col gap-8 min-h-[calc(100vh-64px)]">
@@ -334,7 +331,7 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, image, f
                   className="flex items-center justify-center h-10 px-4 rounded-lg bg-white dark:bg-card-dark border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-sm font-medium shadow-sm"
                >
                   <span className="material-symbols-outlined mr-2 text-[20px]">add_photo_alternate</span>
-                  Change Image
+                  Change Images
                </button>
                {result && (
                   <button
@@ -350,19 +347,55 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, image, f
 
          <div className="flex flex-col lg:flex-row gap-6 h-full flex-1">
             {/* Left Column: Image Viewer */}
-            <div className="flex-1 bg-slate-100 dark:bg-card-dark rounded-xl border border-slate-200 dark:border-border-dark overflow-hidden relative min-h-[400px] flex items-center justify-center group">
-               {file.type === 'application/pdf' ? (
-                  <div className="flex flex-col items-center justify-center text-slate-400 p-8 scale-150">
-                     <span className="material-symbols-outlined text-6xl text-red-500 mb-4 opacity-100">picture_as_pdf</span>
-                     <span className="text-lg font-medium text-slate-700 dark:text-slate-300">{file.name}</span>
-                     <span className="text-sm mt-1">PDF Document</span>
+            <div className="flex-1 bg-slate-100 dark:bg-card-dark rounded-xl border border-slate-200 dark:border-border-dark overflow-hidden relative min-h-[400px] flex flex-col group">
+               <div className="flex-1 relative flex items-center justify-center bg-slate-200/50 dark:bg-black/20">
+                  {currentImage.file.type === 'application/pdf' ? (
+                     <div className="flex flex-col items-center justify-center text-slate-400 p-8 scale-150">
+                        <span className="material-symbols-outlined text-6xl text-red-500 mb-4 opacity-100">picture_as_pdf</span>
+                        <span className="text-lg font-medium text-slate-700 dark:text-slate-300">{currentImage.file.name}</span>
+                        <span className="text-sm mt-1">PDF Document</span>
+                     </div>
+                  ) : (
+                     <img
+                        src={currentImage.url}
+                        alt={`Uploaded letter page ${currentImageIndex + 1}`}
+                        className="w-full h-full object-contain max-h-[70vh]"
+                     />
+                  )}
+
+                  {/* Navigation Arrows */}
+                  {images.length > 1 && (
+                     <>
+                        <button
+                           onClick={() => setCurrentImageIndex(prev => Math.max(0, prev - 1))}
+                           disabled={currentImageIndex === 0}
+                           className="absolute left-4 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                        >
+                           <span className="material-symbols-outlined">chevron_left</span>
+                        </button>
+                        <button
+                           onClick={() => setCurrentImageIndex(prev => Math.min(images.length - 1, prev + 1))}
+                           disabled={currentImageIndex === images.length - 1}
+                           className="absolute right-4 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                        >
+                           <span className="material-symbols-outlined">chevron_right</span>
+                        </button>
+                     </>
+                  )}
+               </div>
+
+               {/* Image Dots/Counter */}
+               {images.length > 1 && (
+                  <div className="h-12 bg-white dark:bg-card-dark border-t border-slate-200 dark:border-border-dark flex items-center justify-center gap-2">
+                     {images.map((_, idx) => (
+                        <button
+                           key={idx}
+                           onClick={() => setCurrentImageIndex(idx)}
+                           className={`w-2 h-2 rounded-full transition-all ${idx === currentImageIndex ? 'bg-primary w-4' : 'bg-slate-300 dark:bg-slate-600'}`}
+                        />
+                     ))}
+                     <span className="ml-2 text-xs text-slate-500 font-medium">Page {currentImageIndex + 1} of {images.length}</span>
                   </div>
-               ) : (
-                  <img
-                     src={image}
-                     alt="Uploaded letter"
-                     className="w-full h-full object-contain max-h-[70vh]"
-                  />
                )}
 
                {/* Action Overlay */}
@@ -373,7 +406,7 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, image, f
                         className="h-14 px-8 rounded-full bg-primary hover:bg-blue-600 text-white font-bold text-lg shadow-2xl scale-100 hover:scale-105 transition-all flex items-center gap-2 animate-in fade-in zoom-in duration-300"
                      >
                         <span className="material-symbols-outlined">auto_awesome</span>
-                        Decipher with AI
+                        Decipher {images.length} Document{images.length !== 1 ? 's' : ''} with AI
                      </button>
                   </div>
                )}
@@ -382,7 +415,7 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, image, f
                   <div className="absolute inset-0 bg-white/80 dark:bg-black/60 flex flex-col items-center justify-center z-10 backdrop-blur-sm">
                      <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
                      <p className="text-lg font-bold text-primary animate-pulse">Deciphering Handwriting...</p>
-                     <p className="text-sm text-slate-500">Analyzing strokes & context</p>
+                     <p className="text-sm text-slate-500">Analyzing strokes & context across {images.length} page{images.length !== 1 ? 's' : ''}</p>
                   </div>
                )}
             </div>
@@ -500,14 +533,34 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, image, f
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
                <div className="bg-white dark:bg-[#0f172a] rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-4xl flex flex-col md:flex-row overflow-hidden">
                   {/* Preview Image Side */}
-                  <div className="md:w-1/2 bg-slate-100 dark:bg-black/50 p-6 flex items-center justify-center border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-700">
-                     {file.type === 'application/pdf' ? (
+                  <div className="md:w-1/2 bg-slate-100 dark:bg-black/50 p-6 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-700 relative">
+                     {currentImage.file.type === 'application/pdf' ? (
                         <div className="flex flex-col items-center justify-center text-slate-400 p-8">
                            <span className="material-symbols-outlined text-6xl text-red-500 mb-4">picture_as_pdf</span>
-                           <span className="text-lg font-medium text-slate-700 dark:text-slate-300">{file.name}</span>
+                           <span className="text-lg font-medium text-slate-700 dark:text-slate-300">{currentImage.file.name}</span>
                         </div>
                      ) : (
-                        <img src={image} alt="Preview" className="max-h-[300px] object-contain rounded-lg shadow-lg" />
+                        <img src={currentImage.url} alt="Preview" className="max-h-[300px] object-contain rounded-lg shadow-lg" />
+                     )}
+                     <div className="mt-4 text-xs text-slate-500">Preview of page {currentImageIndex + 1}</div>
+                     {/* Navigation Arrows for Modal */}
+                     {images.length > 1 && (
+                        <>
+                           <button
+                              onClick={() => setCurrentImageIndex(prev => Math.max(0, prev - 1))}
+                              disabled={currentImageIndex === 0}
+                              className="absolute left-4 p-2 rounded-full bg-black/20 hover:bg-black/40 text-black/50 hover:text-white disabled:opacity-0 transition-all"
+                           >
+                              <span className="material-symbols-outlined">chevron_left</span>
+                           </button>
+                           <button
+                              onClick={() => setCurrentImageIndex(prev => Math.min(images.length - 1, prev + 1))}
+                              disabled={currentImageIndex === images.length - 1}
+                              className="absolute right-4 p-2 rounded-full bg-black/20 hover:bg-black/40 text-black/50 hover:text-white disabled:opacity-0 transition-all"
+                           >
+                              <span className="material-symbols-outlined">chevron_right</span>
+                           </button>
+                        </>
                      )}
                   </div>
 
@@ -630,6 +683,19 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, image, f
                               <span className="font-medium">Text File (.txt)</span>
                            </label>
                         </div>
+                     </div>
+
+                     <div className="flex flex-col gap-2">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                           Translator Name
+                        </label>
+                        <input
+                           type="text"
+                           value={translatorName}
+                           onChange={(e) => setTranslatorName(e.target.value)}
+                           className="w-full h-12 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                           placeholder="Enter your name"
+                        />
                      </div>
 
                      <div className="flex flex-col gap-2">

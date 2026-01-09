@@ -58,7 +58,7 @@ function App() {
 
   const [appState, setAppState] = useState<AppState>(AppState.LANDING);
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
-  const [uploadedImage, setUploadedImage] = useState<{ url: string; file: File } | null>(null);
+  const [uploadedImages, setUploadedImages] = useState<{ url: string; file: File }[] | null>(null);
 
 
   // CTA for content that requires auth
@@ -135,16 +135,17 @@ function App() {
         )}
 
         {appState === AppState.APP && (
-          uploadedImage ? (
+          uploadedImages ? (
             <TranslationView
               user={user}
-              image={uploadedImage.url}
-              file={uploadedImage.file}
-              onReset={() => setUploadedImage(null)}
+              images={uploadedImages}
+              onReset={() => setUploadedImages(null)}
             />
           ) : (
             <UploadView
-              onProcess={(file, url) => setUploadedImage({ url, file })}
+              onProcess={(files, urls) => {
+                setUploadedImages(files.map((file, i) => ({ file, url: urls[i] })));
+              }}
               onCancel={() => setAppState(AppState.LANDING)}
             />
           )
