@@ -9,6 +9,8 @@ export interface TranslationResult {
   translation: string;
   detectedLanguage?: string;
   confidenceScore?: number;
+  ocrUsed?: boolean;
+  rawOCR?: string;
 }
 
 export interface ChatMessage {

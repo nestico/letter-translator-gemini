@@ -13,13 +13,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setIsLoading(true);
+
     try {
       if (isRegistering) {
         const { data, error } = await supabase.auth.signUp({
@@ -38,7 +41,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
           // onLogin will be handled by auth state change in App.tsx, but we can close modal
           onClose();
         } else if (data.user) {
-          alert('Registration successful! Please check your email for the confirmation link.');
+          // Show explicit success message in UI instead of alert
+          setError(null); // Clear any previous errors
+          alert('Registration successful! Please check your email for the confirmation link.'); // Keep alert for now for simple confirmation, or upgrade to UI message
+          onClose();
         }
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -50,7 +56,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
       }
     } catch (error: any) {
       console.error('Auth error:', error);
-      alert(error.message || 'Authentication failed');
+      setError(error.message || 'Authentication failed. Please check your credentials.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -79,15 +87,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            {error && (
+              <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 flex items-start gap-2 text-sm text-red-600 dark:text-red-400 animate-in fade-in slide-in-from-top-1">
+                <span className="material-symbols-outlined text-[18px] mt-0.5">error</span>
+                <span>{error}</span>
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
               <input
                 type="email"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-border-dark bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                onChange={(e) => { setEmail(e.target.value); setError(null); }}
+                className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-border-dark bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all disabled:opacity-50"
                 placeholder="you@example.com"
+                disabled={isLoading}
               />
             </div>
             <div>
@@ -96,16 +112,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
                 type="password"
                 required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-border-dark bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                onChange={(e) => { setPassword(e.target.value); setError(null); }}
+                className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-border-dark bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all disabled:opacity-50"
                 placeholder="••••••••"
+                disabled={isLoading}
               />
             </div>
             <button
               type="submit"
-              className="mt-2 w-full h-11 bg-primary hover:bg-blue-600 text-white font-bold rounded-lg transition-colors shadow-lg shadow-primary/20"
+              disabled={isLoading}
+              className="mt-2 w-full h-11 bg-primary hover:bg-blue-600 text-white font-bold rounded-lg transition-colors shadow-lg shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {isRegistering ? 'Sign Up' : 'Sign In'}
+              {isLoading && (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              )}
+              {isLoading
+                ? (isRegistering ? 'Creating Account...' : 'Signing In...')
+                : (isRegistering ? 'Sign Up' : 'Sign In')}
             </button>
           </form>
 

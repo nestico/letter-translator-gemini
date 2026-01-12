@@ -345,6 +345,16 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
             </div>
          </div>
 
+         {/* Configuration Warning - DEBUG ONLY */}
+         {!import.meta.env.VITE_AZURE_VISION_KEY && (
+            <div className="flex w-full justify-end mb-4">
+               <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded text-sm font-semibold shadow-sm animate-pulse max-w-lg">
+                  ⚠️ Azure Vision Configuration Missing. Using Legacy Mode.
+               </div>
+            </div>
+         )}
+
+
          <div className="flex flex-col lg:flex-row gap-6 h-full flex-1">
             {/* Left Column: Image Viewer */}
             <div className="flex-1 bg-slate-100 dark:bg-card-dark rounded-xl border border-slate-200 dark:border-border-dark overflow-hidden relative min-h-[400px] flex flex-col group">
@@ -482,12 +492,24 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                   {result && editedResult && (
                      <div className="prose dark:prose-invert max-w-none relative">
                         <div className="flex justify-between items-center mb-4">
-                           {result.detectedLanguage && (
-                              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                                 <span className="material-symbols-outlined text-[16px]">translate</span>
-                                 Detected: {result.detectedLanguage}
-                              </div>
-                           )}
+                           <div className="flex items-center gap-3">
+                              {result.detectedLanguage && (
+                                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                                    <span className="material-symbols-outlined text-[16px]">translate</span>
+                                    Detected: {result.detectedLanguage}
+                                 </div>
+                              )}
+                              {result.ocrUsed && (
+                                 <button
+                                    onClick={() => alert(`Raw OCR Output:\n\n${result.rawOCR}`)}
+                                    className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-xs font-semibold text-blue-600 dark:text-blue-300 hover:bg-blue-200 cursor-pointer"
+                                    title="Click to view raw OCR output"
+                                 >
+                                    <span className="material-symbols-outlined text-[16px]">visibility</span>
+                                    Azure Vision OCR Active
+                                 </button>
+                              )}
+                           </div>
                            <button
                               onClick={() => setIsEditing(!isEditing)}
                               className={`text-sm font-semibold flex items-center gap-1 ${isEditing ? 'text-green-600' : 'text-blue-600'}`}

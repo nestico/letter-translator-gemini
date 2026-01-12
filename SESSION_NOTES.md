@@ -100,3 +100,19 @@
         - Extract **factual details** (names, dates, festivals) and avoid generic summarization.
         - Ignore English form headers when detecting the primary language of the letter.
     - **Result**: Significant improvement in translating specific details from handwritten Telugu/mixed letters.
+
+# Session Notes - Jan 12, 2026
+
+### 11. Multi-Stage OCR Pipeline Implementation & Refinement
+- **Objective**: Integrate Azure AI Vision (OCR) to preprocess text before sending it to GPT, improving accuracy and reducing costs for standard text.
+- **Challenge**: Azure Vision Read API (v3.2) failed significantly on non-Latin scripts (Amharic, Telugu), producing "garbage text" (e.g., "345 notär...") and crashing with Error 400 when forced to read them.
+- **Solution (Smart Routing)**:
+    - Implemented a **Hybrid Pipeline** in `azureService.ts`.
+    - **OCR Mode (Text-Only)**: Used strictly for **English, Spanish, French** and other Latin scripts. This extracts text cheaply and accurately.
+    - **Visual Mode (Legacy/Smart Fallback)**: Automatically triggered for **Amharic, Telugu**, and "Auto-Detect" modes. This uses GPT-4o Vision directly, which is far superior for reading complex non-Latin handwriting.
+- **Prompt Engineering**:
+    - Split the System Prompt into two specialized personas:
+        1.  **OCR Prompt**: Focuses on repairing corrupted text.
+        2.  **Visual Prompt**: Focuses on **Literal Transcription**.
+    - **Hallucination Fix**: The Visual Prompt was specifically tuned with context for **"Sponsorship Letters"**, instructing the AI to look for concrete details (goats, money, school) and strictly avoid inventing emotional narratives (e.g., "tears in my eyes") that aren't present in the source image.
+- **Outcome**: Achieved high accuracy for Amharic by correctly bypassing the flawed OCR engine and using context-aware Visual Intelligence.
