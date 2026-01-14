@@ -116,3 +116,21 @@
         2.  **Visual Prompt**: Focuses on **Literal Transcription**.
     - **Hallucination Fix**: The Visual Prompt was specifically tuned with context for **"Sponsorship Letters"**, instructing the AI to look for concrete details (goats, money, school) and strictly avoid inventing emotional narratives (e.g., "tears in my eyes") that aren't present in the source image.
 - **Outcome**: Achieved high accuracy for Amharic by correctly bypassing the flawed OCR engine and using context-aware Visual Intelligence.
+
+# Session Notes - Jan 13, 2026
+
+### 12. Hybrid OCR & Hallucination Fixes for Indian Languages
+- **Objective**: Fix poor translation quality and hallucinations (e.g., inventing "goats" or "Christmas") in Telugu and Tamil letters.
+- **Root Cause Analysis**:
+    1.  **Hallucinations**: The previous prompt had "Sponsorship Context" examples (goats, gift money) which biased the model to "fill in the blanks" with generic sponsorship tropes instead of reading the text.
+    2.  **Identity Confusion**: The model often confused the **Writer** (e.g., Swapna/Cousin) with the **Child** (Srivalli), leading to incorrect first-person narratives.
+    3.  **Missing Pages**: The model would sometimes stop reading after Page 1.
+- **Solution (Unified Hybrid Pipeline)**:
+    - **Global OCR**: Enabled Azure Vision OCR for *all* languages (not just Latin). Even if it can't read Telugu handwriting, it accurately reads the **English Headers** (Child Name, ID, Date).
+    - **Metadata Anchor**: Used the OCR text to explicitly extract the "Written By" field, anchoring the translation context (e.g., "[Writer: Swapna]").
+    - **"Forensic" Prompting**:
+        - Removed "Sponsorship" keywords.
+        - Added **Negative Constraints** (FORBIDDEN: "Christmas", "Rice", "Goats").
+        - Enforced **Verbatim/Literal** translation mode.
+        - Forced **Multi-Page Scanning** by explicitly combining image inputs.
+- **Outcome**: The system now correctly identifies the writer and produces literal, fact-based translations (e.g., "Mankara Sankranti", "Mangoes", "7th Class") without inventing stories.
