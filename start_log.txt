@@ -1,0 +1,3 @@
+[2m12:23:34 p.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m Forced re-optimization of dependencies
+[31merror when starting dev server:
+Error: EPERM: operation not permitted, rmdir 'C:\ANTIGRABITY\letter-translator\node_modules\.vite\deps'[39m
