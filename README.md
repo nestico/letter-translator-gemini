@@ -1,17 +1,18 @@
 <div align="center">
   <h1>Letter Translator</h1>
-  <p>Decipher and translate handwritten letters with the power of AI.</p>
+  <p>Decipher and translate handwritten letters with the power of Google Gemini AI.</p>
 </div>
 
 ## Overview
 **Letter Translator** is an intelligent web application designed to help users decipher, transcribe, and translate handwritten documents. Whether it's an old family letter or a historical document, this tool leverages advanced AI models to convert difficult handwriting into clear, digital text and translate it into your preferred language.
 
 ## Key Features
-- **AI-Powered Deciphering**: Uses Azure OpenAI (GPT-4o) to accurately transcribe cursive and aged handwriting.
-- **Multi-Language Support**: Auto-detects source language and translates to over 10 languages (English, Spanish, French, German, etc.).
+- **AI-Powered Deciphering**: Uses **Google Gemini 2.0 Flash** to accurately transcribe cursive and aged handwriting with high fidelity.
+- **Multi-Language Support**: Auto-detects source language (Amharic, Telugu, Spanish, etc.) and translates to clear, modern English.
 - **Smart Image Processing**: 
   - Upload images (PNG, JPG) or PDF documents.
   - Built-in rotation tools to correct scanned orientation.
+  - **Multi-Page Support**: Intelligent stitching of multiple pages into a single coherent narrative.
 - **Translation Workspace**: 
   - Dual-pane view for comparing original text with the translation.
   - Editable transcription and translation fields for manual corrections.
@@ -23,7 +24,7 @@
 
 ## Tech Stack
 - **Frontend**: React, TypeScript, Vite, TailwindCSS
-- **AI Service**: Azure OpenAI Service (GPT-4o Integration)
+- **AI Service**: Google Gemini 2.0 Flash (@google/generative-ai)
 - **Backend/Auth**: Supabase
 - **PDF Generation**: jsPDF
 
@@ -31,7 +32,7 @@
 
 ### Prerequisites
 - Node.js (v16 or higher)
-- An Azure OpenAI API Key and Endpoint
+- A Google Gemini API Key
 - A Supabase Project URL and Anon Key
 
 ### Installation
@@ -50,10 +51,8 @@
 3. **Configure Environment Variables:**
    Create a `.env` file in the root directory and add the following keys:
    ```env
-   # Azure OpenAI Configuration
-   VITE_AZURE_OPENAI_ENDPOINT=your_azure_endpoint
-   VITE_AZURE_OPENAI_API_KEY=your_azure_api_key
-   VITE_AZURE_OPENAI_DEPLOYMENT=your_deployment_name
+   # Google Gemini Configuration
+   VITE_GEMINI_API_KEY=your_gemini_api_key
 
    # Supabase Configuration
    VITE_SUPABASE_URL=your_supabase_url

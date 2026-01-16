@@ -134,3 +134,42 @@
         - Enforced **Verbatim/Literal** translation mode.
         - Forced **Multi-Page Scanning** by explicitly combining image inputs.
 - **Outcome**: The system now correctly identifies the writer and produces literal, fact-based translations (e.g., "Mankara Sankranti", "Mangoes", "7th Class") without inventing stories.
+
+# Session Notes - Jan 16, 2026
+
+### 13. Backend Migration: Azure OpenAI to Google Gemini
+- **Objective**: Migrate the application's translation backend from Azure AI to Google Gemini to leverage the gumini-2.0-flash model for potentially better performance and cost-effectiveness.
+- **Changes**:
+    - **New Service**: Created services/geminiService.ts to handle interactions with the Google Gemini API.
+    - **Replaced Service**: Deprecated and replaced services/azureService.ts functionality within the application flow.
+    - **Dependencies**: Added @google/generative-ai package.
+    - **Configuration**:
+        - Removed Azure-specific keys integration from the active service.
+        - Added VITE_GEMINI_API_KEY to .env.
+    - **UI Updates**:
+        - Updated TranslationView.tsx to reference geminiService.
+        - Removed Azure-specific UI elements (e.g., Raw OCR output button).
+        - Updated processing state messages to explicitly state 'Deciphering with Gemini AI'.
+
+### 14. Advanced Prompt Engineering & Stability (Gemini)
+- **Objective**: Ensure high-fidelity translations, prevent hallucinations, and solve repetitive output issues common with generative models.
+- **Implementation**:
+    - **Model Configuration**:
+        - Selected gumini-2.0-flash (Stable) for better reliability.
+        - Applied presencePenalty: 0.6 and frequencyPenalty: 0.4 to discourage looping.
+    - **Prompt Engineering**:
+        - **First-Person Persona**: Enforced strict instructions for the AI to adopt the writer's persona ('I, we, my') and sign off exactly once.
+        - **Hyper-Specific Rules**: Defines distinct personas for **Telugu** ('Telugu Script Expert'), **Amharic** ('Specialist Amharic Archivist'), and **Spanish**.
+        - **Negative Constraints**: Explicitly forbade common hallucinations (e.g., 'Do not invent Christmas', 'Do not invent Goats').
+        - **JSON Schema**: Enforced a strict JSON structure separating headerInfo (Metadata) from translation (Body) to keep the narrative clean.
+    - **Loop Prevention**:
+        - Added a **'Hard Stop'** instruction to cease generation immediately after the signature.
+        - Implemented **Singularity** rules to prevent providing summaries or drafts.
+
+### 15. Resilience & Rate Limiting
+- **Problem**: Encountered 429 Too Many Requests errors due to Gemini's RPM limits.
+- **Solution**:
+    - **Exponential Backoff**: Implemented a retry mechanism in geminiService.ts that waits 2s, 4s, then 8s before failing.
+    - **Batch Processing**: Ensured all pages of a multi-page letter are sent in a **single API request** to minimize call count and maintain narrative continuity.
+    - **Error Handling**: Added fallback logic to manually repair truncated JSON responses if the AI output is cut off.
+

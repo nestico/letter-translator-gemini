@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { translateImage } from '../services/azureService';
+import { translateImage } from '../services/geminiService';
 import { User, TranslationResult } from '../types';
 import { logActivity } from '../services/activity';
 import { saveTranslation } from '../services/translationService';
@@ -345,14 +345,7 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
             </div>
          </div>
 
-         {/* Configuration Warning - DEBUG ONLY */}
-         {!import.meta.env.VITE_AZURE_VISION_KEY && (
-            <div className="flex w-full justify-end mb-4">
-               <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded text-sm font-semibold shadow-sm animate-pulse max-w-lg">
-                  ⚠️ Azure Vision Configuration Missing. Using Legacy Mode.
-               </div>
-            </div>
-         )}
+
 
 
          <div className="flex flex-col lg:flex-row gap-6 h-full flex-1">
@@ -421,11 +414,12 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                   </div>
                )}
 
+
                {isProcessing && (
                   <div className="absolute inset-0 bg-white/80 dark:bg-black/60 flex flex-col items-center justify-center z-10 backdrop-blur-sm">
                      <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-                     <p className="text-lg font-bold text-primary animate-pulse">Deciphering Handwriting...</p>
-                     <p className="text-sm text-slate-500">Analyzing strokes & context across {images.length} page{images.length !== 1 ? 's' : ''}</p>
+                     <p className="text-lg font-bold text-primary animate-pulse">Deciphering with Gemini AI...</p>
+                     <p className="text-sm text-slate-500">Gemini 2.0 Flash is analyzing strokes & context across {images.length} page{images.length !== 1 ? 's' : ''}</p>
                   </div>
                )}
             </div>
@@ -452,9 +446,9 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                   {isProcessing && !result && (
                      <div className="h-full flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-300">
                         <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-6"></div>
-                        <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Deciphering Your Document</h3>
+                        <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Deciphering with Gemini AI</h3>
                         <p className="text-slate-500 dark:text-slate-400 max-w-sm">
-                           Our AI is analyzing the handwriting, transcribing the text, and translating it to {targetLanguage}.
+                           Google Gemini 2.0 Flash is analyzing the handwriting, transcribing the text, and translating it to {targetLanguage}.
                         </p>
                         <div className="flex gap-2 mt-6">
                            <span className="w-2 h-2 rounded-full bg-primary animate-bounce"></span>
@@ -499,16 +493,7 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                                     Detected: {result.detectedLanguage}
                                  </div>
                               )}
-                              {result.ocrUsed && (
-                                 <button
-                                    onClick={() => alert(`Raw OCR Output:\n\n${result.rawOCR}`)}
-                                    className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-xs font-semibold text-blue-600 dark:text-blue-300 hover:bg-blue-200 cursor-pointer"
-                                    title="Click to view raw OCR output"
-                                 >
-                                    <span className="material-symbols-outlined text-[16px]">visibility</span>
-                                    Azure Vision OCR Active
-                                 </button>
-                              )}
+
                            </div>
                            <button
                               onClick={() => setIsEditing(!isEditing)}

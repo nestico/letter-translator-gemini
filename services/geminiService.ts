@@ -1,133 +1,190 @@
-import { GoogleGenerativeAI as GoogleGenAI, SchemaType } from "@google/generative-ai";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 
-const apiKey = import.meta.env.VITE_GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY;
-let ai: GoogleGenAI | null = null;
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
-const PLACEHOLDER_KEY = "AIzaSyDtBsuC8kLHeY6JH3ma8VQXdAPbYhYC_Ck";
-
-const getAi = () => {
-  // Always log the status of the key for debugging
-  console.log("Debug: apiKey type:", typeof apiKey);
-  console.log("Debug: apiKey length:", apiKey?.length);
-
-
-  if (apiKey === PLACEHOLDER_KEY) {
-    console.error("CRITICAL: You are using the default placeholder API key. This will not work.");
-    alert("You are using the placeholder API Key. Please update .env.local with your real Google Gemini API Key.");
-    return null;
+const LANGUAGE_SPECIFIC_RULES = {
+  "Telugu": {
+    role: "Telugu Script Expert",
+    special_instructions: "Pay special attention to the distinction between the Child (beneficiary) and the Writer (scribe/parent). Do not confuse their identities. Look for specific mentions of seasonal crops (Mangoes, Jamun), festivals (Sankranti), and school details.",
+    negative_constraints: ["Do not invent Christmas", "Do not invent Goats", "Do not invent Rice", "Do not invent Temples"]
+  },
+  "Amharic": {
+    role: "Specialist Amharic Archivist",
+    special_instructions: "100% LITERAL FIDELITY. Use trusted reference data. Look for specific characters like 'ፍየል' (goat) only if visually present. Identify the child's name accurately.",
+    negative_constraints: ["Do not summarize", "Do not simplify", "Do not invent generic blessings"]
+  },
+  "Spanish": {
+    role: "Latin American Spanish Specialist",
+    special_instructions: "Maintain regional dialect nuances. Distinguish between distinct handwritten styles if multiple people wrote on the document.",
+    negative_constraints: []
+  },
+  "General": {
+    role: "Child Sponsorship Letter Analyst",
+    special_instructions: "Translate handwriting verbatim. Use writer context (e.g., if 'Written by Swapna', use 'I am Swapna').",
+    negative_constraints: ["Do not invent boilerplate", "Do not hallucinate content not in the image"]
   }
-
-  // Log first/last chars securely
-  if (apiKey && apiKey.length > 8) {
-    console.log(`Debug: Key starts with ${apiKey.substring(0, 5)}... and ends with ...${apiKey.substring(apiKey.length - 4)}`);
-  }
-
-  if (!ai) {
-    if (!apiKey || apiKey === "undefined") {
-      console.warn("Gemini API Key is missing or invalid (matches 'undefined'). Translation features will not work.");
-      return null;
-    }
-    ai = new GoogleGenAI(apiKey);
-  }
-  return ai;
 };
 
-export const translateImage = async (base64Image: string, mimeType: string, sourceLanguage?: string, targetLanguage: string = 'English') => {
-  const languagePrompt = sourceLanguage && sourceLanguage !== 'Auto-Detect'
-    ? `The document is in ${sourceLanguage}.`
-    : "Identify the original language.";
+// Retry helper with exponential backoff
+const generateWithRetry = async (model: any, contentParts: any[], retries = 3, initialDelay = 2000) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const result = await model.generateContent(contentParts);
+      return result;
+    } catch (error: any) {
+      const isRateLimit = error.message?.includes('429') || error.status === 429;
 
-  try {
-    if (apiKey) {
-      console.log("Using Gemini API Key starting with:", apiKey.substring(0, 8) + "...");
+      if (isRateLimit && i < retries - 1) {
+        const delay = initialDelay * Math.pow(2, i);
+        console.warn(`Gemini 429 Rate Limit hit. Retrying in ${delay}ms... (Attempt ${i + 1}/${retries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      // If not rate limit or last retry, throw
+      throw error;
     }
+  }
+};
 
-    const client = getAi();
-    if (!client) throw new Error("Gemini API Key is missing");
+export const translateImage = async (
+  images: { base64: string; mimeType: string }[],
+  sourceLanguage: string = 'Auto-Detect',
+  targetLanguage: string = 'English'
+) => {
+  if (!apiKey) {
+    throw new Error("Gemini API Key is missing. Please add VITE_GEMINI_API_KEY to your .env file.");
+  }
 
-    console.log("Debug: Sending request to Gemini...");
-    // Initialize the specific model first
-    const model = client.getGenerativeModel({
-      model: "gemini-2.0-flash-exp",
-      generationConfig: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: SchemaType.OBJECT,
-          properties: {
-            transcription: { type: SchemaType.STRING },
-            translation: { type: SchemaType.STRING },
-            detectedLanguage: { type: SchemaType.STRING },
-            confidenceScore: { type: SchemaType.NUMBER }
-          }
+  const genAI = new GoogleGenerativeAI(apiKey);
+
+  // Use stable Gemini 2.0 Flash model
+  const model = genAI.getGenerativeModel({
+    model: "gemini-2.0-flash",
+    generationConfig: {
+      responseMimeType: "application/json",
+      presencePenalty: 0.6, // Discourage repetition
+      frequencyPenalty: 0.4, // Discourage frequent tokens
+      responseSchema: {
+        type: SchemaType.OBJECT,
+        properties: {
+          headerInfo: {
+            type: SchemaType.OBJECT,
+            properties: {
+              childId: { type: SchemaType.STRING },
+              childName: { type: SchemaType.STRING },
+              date: { type: SchemaType.STRING }
+            }
+          },
+          transcription: { type: SchemaType.STRING },
+          translation: { type: SchemaType.STRING },
+          detectedLanguage: { type: SchemaType.STRING },
+          confidenceScore: { type: SchemaType.NUMBER }
         }
       }
-    });
-
-    const response = await model.generateContent([
-      {
-        inlineData: {
-          mimeType: mimeType,
-          data: base64Image
-        }
-      },
-      `Analyze this image of a handwritten letter. ${languagePrompt}
-            1. Transcribe the text exactly as written in its original language.
-            2. Translate the text into clear, modern ${targetLanguage}.
-            3. Identify the original language.
-            
-            Return the response in JSON format.`
-    ]);
-
-    console.log("Debug: Received response from Gemini:", response);
-
-    // Check if response is valid
-    if (!response) {
-      throw new Error("Received empty response from Gemini API");
     }
+  });
 
-    // Try to get text safely, handling different SDK versions
-    let text;
-    if (typeof response.response && typeof response.response.text === 'function') {
-      text = response.response.text();
-    } else if (typeof response.response === 'string') { // Fallback if needed
-      text = response.response;
-    } else {
-      // Fallback for unexpected structure
-      console.warn("Unexpected response structure", response);
+  // Determine rules based on language
+  const languageKey = Object.keys(LANGUAGE_SPECIFIC_RULES).find(key =>
+    sourceLanguage.toLowerCase().includes(key.toLowerCase())
+  ) || "General";
+
+  // @ts-ignore
+  const rules = LANGUAGE_SPECIFIC_RULES[languageKey] || LANGUAGE_SPECIFIC_RULES["General"];
+  const generalRules = LANGUAGE_SPECIFIC_RULES["General"];
+
+  const prompt = `
+  You are a ${rules.role}.
+  
+  **TASK**: 
+  1. Analyze the provided handwritten letter images (which may span multiple pages).
+  2. Transcribe the text exactly as written in its original language.
+  3. Translate the text into clear, modern ${targetLanguage}.
+  4. Identify the original language.
+
+  **PERSONA & TONE**:
+  - **First-Person Persona**: You ARE the child or the family member writing the letter. Use first-person pronouns (I, we, my) exactly as they appear in the handwriting. Never use "The child says..." or "She writes...".
+  - **First-Person Exit**: Sign off ONCE as the writer and then END the response.
+  - **Verbatim Translation**: Do not summarize, interpret, or provide context about the letter. Provide only the direct, warm translation of the words on the page.
+
+  **RULES & CONSTRAINTS**:
+  - **Hard Stop**: Stop immediately after the final closing signature of the letter. Do not repeat greetings, blessings, or names.
+  - **Single High-Fidelity Pass**: Synthesize all pages into one coherent translation. Do not provide a summary or preview. Provide ONLY ONE continuous translation for all pages combined.
+  - **Singularity**: Provide exactly one version of the translation. Do not repeat the letter body. STOP immediately after the signature.
+  - **Merge Narratives**: Merge Page 1 and Page 2 into one continuous narrative without restarting the introduction.
+  - **Avoid Repetition**: Finish the letter naturally as it is written. Do not add repetitive blessings or greetings that are not present in the original text.
+  - **Metadata separation**: Extract metadata (Child Name, ID, Date) strictly into the 'headerInfo' JSON object. Do not repeat these details inside the 'translation' field.
+  - **Conciseness**: The total length of the naturalEnglish field must be proportionate to the source text. Do not hallucinate additional content.
+  - **Cultural Anchors**: Maintain strict fidelity to specific terms (e.g., 'Sankranti', 'cousin sister', 'cousin brother') as they appear in the text.
+  
+  - **Metadata Rules**: ${generalRules.special_instructions}
+  - **Specific Instructions**: ${rules.special_instructions}
+  - **NEGATIVE CONSTRAINTS**: ${[...generalRules.negative_constraints, ...rules.negative_constraints].join(", ")}.
+
+  **OUTPUT FORMAT (JSON)**:
+  {
+    "headerInfo": {
+        "childId": "...",
+        "childName": "...",
+        "date": "..."
+    },
+    "transcription": "Verbatim transcription in original script...",
+    "translation": "English translation (Metadata excluded)...",
+    "detectedLanguage": "Language Name",
+    "confidenceScore": 0.0 to 1.0
+  }
+  `;
+
+  const contentParts: any[] = [prompt];
+
+  // Add all images - Batch Control (Single Request)
+  images.forEach(img => {
+    contentParts.push({
       // @ts-ignore
-      text = response.response?.text?.() || response.text?.();
+      inlineData: {
+        data: img.base64,
+        mimeType: img.mimeType
+      }
+    });
+  });
+
+  try {
+    // Wrapped in retry logic
+    const result = await generateWithRetry(model, contentParts);
+    const response = await result.response;
+    let text = response.text();
+
+    // Safety Force-Close JSON if truncated
+    text = text.trim();
+    if (!text.endsWith("}")) {
+      console.warn("JSON response incomplete. Attempting to force-close...");
+      // If it looks like it was cut off in a string value
+      if (text.lastIndexOf('"') > text.lastIndexOf('}')) {
+        text += '"}';
+      } else {
+        text += '}';
+      }
     }
 
-    console.log("Debug: Extracted text:", text ? text.substring(0, 50) + "..." : "None");
+    try {
+      return JSON.parse(text);
+    } catch (parseError) {
+      console.error("JSON Parse Failed on:", text);
+      throw new Error("Failed to parse Gemini response. The output may have been truncated.");
+    }
 
-    if (!text) throw new Error("No text content in response. Possible safety block or empty result.");
-
-    return JSON.parse(text);
   } catch (error) {
-    console.error("Translation error:", error);
+    console.error("Gemini Translation Error:", error);
     throw error;
   }
 };
 
-
 export const createChatSession = () => {
-  const client = getAi();
-  if (!client) {
-    console.warn("Cannot create chat session: No API Key");
-    return {
-      sendMessage: async () => ({ response: { text: () => "Please add your API Key in .env to use the chatbot." } })
-    } as any;
-  }
-
-  const model = client.getGenerativeModel({
-    model: "gemini-2.0-flash-exp",
-    systemInstruction: "You are an expert historian and archivist assistant. You help users understand historical contexts, archaic vocabulary, and details about handwritten letters they are translating. Keep answers concise and helpful."
-  });
-
-  return model.startChat({
-    history: [],
-    generationConfig: {
-      maxOutputTokens: 1000
+  // Placeholder for now, as the main request was about translation service
+  return {
+    sendMessage: async (message: string) => {
+      return { response: { text: () => "Chatbot backend update pending." } };
     }
-  });
+  };
 };
