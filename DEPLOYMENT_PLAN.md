@@ -52,22 +52,26 @@ The Supabase **Free Tier** includes only **1GB** of file storage.
 
 ---
 
-#### **3. AI Processing (Azure OpenAI GPT-4o)**
-*Note: This is "Pay-as-you-go". You only pay for what you process.*
+#### **3. AI Processing (Google Gemini 2.0 Flash)**
+*Note: This is "Pay-as-you-go" on the Google Gemini Paid Tier.*
+
+**Input Cost (Text/Prompts):**
+- ~$0.10 per 1 million tokens.
 
 **Input Cost (Images):**
-- **Low Detail**: ~$0.003 / image.
-- **High Detail**: ~$0.012 / image.
-- **Assumed Mix**: Mostly High Detail (handwriting requires clarity).
+- **Fixed Cost**: 258 tokens per image.
+- **Price**: (258 / 1,000,000) * $0.10 = **~$0.0000258 per image**.
+- **Efficiency**: The app synthesizes multiple pages into a **single request**, minimizing input token overhead.
 
 **Output Cost (Translation Text):**
-- ~500 tokens (approx 400 words) per letter.
-- Cost: $15.00 / 1M output tokens = $0.0075 per letter.
+- **Rate**: ~$0.40 per 1 million tokens.
+- **Volume**: ~500 tokens (approx 400 words) per letter.
+- **Cost**: (500 / 1,000,000) * $0.40 = **~$0.0002 per letter**.
 
 **Monthly Projection:**
-- **Images**: 300 letters * $0.012 = **$3.60**
-- **Text**: 300 letters * $0.0075 = **$2.25**
-- **Total AI Cost**: **~$5.85 / month**
+- **Images**: 300 letters * 2 pages * $0.0000258 = **$0.015** (negligible)
+- **Text**: 300 letters * $0.0002 = **$0.06**
+- **Total AI Cost**: **<$1.00 / month** (Significant savings over Azure).
 
 ---
 
@@ -77,8 +81,8 @@ The Supabase **Free Tier** includes only **1GB** of file storage.
 | :--- | :--- | :--- | :--- |
 | **Frontend** | $0 (Vercel Free) | $0 (Vercel Free) | ~$4.99 (Hostinger VPS) |
 | **Backend/DB** | $0 (Supabase Free)* | $25 (Supabase Pro) | $25 (Supabase Pro) |
-| **AI Usage** | ~$5.85 (Azure) | ~$5.85 (Azure) | ~$5.85 (Azure) |
-| **TOTAL** | **~$5.85 / mo** | **~$30.85 / mo** | **~$35.84 / mo** |
+| **AI Usage** | <$1.00 (Gemini) | <$1.00 (Gemini) | <$1.00 (Gemini) |
+| **TOTAL** | **~$1.00 / mo** | **~$26.00 / mo** | **~$30.99 / mo** |
 
 * *Option A risks hitting the 1GB storage limit in the first month. We recommend Option B for stability.*
 
@@ -89,18 +93,25 @@ The Supabase **Free Tier** includes only **1GB** of file storage.
 ### **Architecture**
 ```mermaid
 graph TD
-    User_India((User - India)) -->|Edge Network| Vercel["Vercel (Frontend)<br/>React + TypeScript"]
+    User_India((User - India)) -->|Edge Network| Vercel["Vercel (Frontend)<br/>React + Vite + TypeScript"]
     User_Africa((User - Africa)) -->|Edge Network| Vercel
     
     Vercel -->|Auth/Data| Supabase["Supabase (Backend)<br/>PostgreSQL + Auth"]
     
-    Vercel -->|API| Azure["Azure OpenAI (AI Engine)<br/>Model: GPT-4o<br/>Langs: English, Spanish, French, Telugu, Tamil"]
+    Vercel -->|API| Gemini["Google Gemini API<br/>Model: Gemini 2.0 Flash<br/>Processing: Single High-Fidelity Pass"]
     
     subgraph "Supabase Storage"
         Pro_Tier["Pro Plan ($25/mo)<br/>Stores Letter Images"]
     end
     Supabase --> Pro_Tier
 ```
+
+**System Flow:**
+1. **Client (React/Vite)**: User uploads images.
+2. **geminiService.ts**: Synthesizes images into a single `generateContent` payload to reduce overhead.
+3. **Google AI API**: Gemini 2.0 Flash processes the batch and returns JSON (Transcription + Translation).
+4. **Export**: Client generates a sanitized PDF report via `jspdf`.
+5. **Storage**: Metadata and valid translations are saved to Supabase (PostgreSQL).
 
 ### **Deployment Steps**
 
