@@ -1,230 +1,82 @@
-# Deployment Plan & Cost Analysis: Letter Translator App
-
+# Deployment Plan & Cost Analysis: Letter Translator Gemini
 ## 1. Project Requirements & Usage Assumptions
+User Base: ~20 active users (distributed across Africa, India, Central America).
 
-**User Base:**
-- **Users**: ~20 active users (distributed across Africa, India, Central America).
-- **Activity**: ~10 letter uploads/day (Total = ~300 uploads/month).
-- **Platform**: Web-based (Mobile & Desktop).
+Activity: ~10 letter uploads/day (total ~300 uploads/month).
 
-**Technical Needs:**
-- **Frontend**: React (Vite) Single Page Application.
-- **Backend/Auth**: Supabase (PostgreSQL, Auth, Storage).
-- **AI Processing**: Azure OpenAI (GPT-4o) for image interpretation.
+Platform: Web-based (Mobile & Desktop).
 
----
+Technical Needs:
 
-## 2. Cost Analysis Breakdown
+Frontend: React (Vite) Single Page Application.
 
-### **A. Usage & Hosting Costs**
+Backend/Auth: Supabase (PostgreSQL, Auth, Storage).
 
-#### **1. Frontend Hosting** (Vercel vs. Netlify vs. Hostinger vs. Azure)
+AI Processing: Google Gemini 2.0 Flash for multimodal image interpretation and synthesis.
 
-| Provider | Plan | Monthly Cost | Pros | Cons |
-| :--- | :--- | :--- | :--- | :--- |
-| **Vercel** | **Free Tier** | **$0** | Fastest for React; Global CDN (great for speed in India/Africa); Zero-config; "Set and forget". | Commercial use technically restricted (though strictly enforced mainly for growing businesses). |
-| **Netlify** | **Free Tier** | **$0** | Excellent global CDN; 100GB bandwidth/mo (plenty for 300 images). | Similar commercial restrictions to Vercel on free tier. |
-| **Azure Static Apps** | **Free Tier** | **$0** | Deep integration if you put everything in Azure later. | Slightly slower deployment cold starts than Vercel. |
-| **Hostinger** | **Business Shared** | **~$3.99 - $8.99** | Complete control; Email included; No "commercial use" restrictions. | **Overkill & Slower**. React apps are static files; hosting them on a traditional PHP/Node server is unnecessary and slower than a global CDN. |
-| **Hostinger** | **VPS KVM 1** | **~$4.99 - $7.99** | Full root access; isolated resources. | Requires manual server maintenance, security patches, Nginx config. High effort. |
+## 2. System Architecture
+### A. Technical Stack
+AI Engine: Google Generative AI SDK (@google/generative-ai).
 
-**Recommendation:**
-**Stick with Vercel (Free)** or **Netlify (Free)**.
-*   **Why?** Static hosting CDNs (Vercel/Netlify) serve your app from servers *closest* to your users in India/Africa/Central America automatically. Hostinger Shared/VPS typically serves from **one** location (e.g., USA or Amsterdam), making the app slower for global users.
-*   **Bandwidth Check:** 300 uploads/month * ~5MB/image = 1.5GB/month. Vercel/Netlify give you **100GB** for free. You are utilizing <2% of the free limit.
+Model: gemini-2.0-flash (Paid Tier 1).
 
----
+PDF Export: jsPDF using Legacy Save method to ensure filename integrity and branding consistency.
 
-#### **2. Database & Storage (Supabase)**
+### B. Architecture Diagram
+Code snippet
 
-| Resource | Usage (Est.) | Free Tier Limit | Cost |
-| :--- | :--- | :--- | :--- |
-| **Database** | Metadata for 300 letters | 500 MB | **$0** |
-| **File Storage** | 300 images * 5MB = 1.5GB/mo | 1 GB | **Risk ($0)** |
-| **Auth** | 20 Users | 50,000 MAU | **$0** |
-
-**Cost Warning:**
-The Supabase **Free Tier** includes only **1GB** of file storage.
-- Month 1: 1.5GB usage -> **Exceeds free limit**.
-- **Solution**:
-    1.  **Upgrade to Pro ($25/mo)**: Get 100GB storage.
-    2.  **External Storage**: Store images in Azure Blob Storage or AWS S3 instead (~$0.02/GB) if you want to save money, but this adds coding complexity.
-
----
-
-#### **3. AI Processing (Google Gemini 2.0 Flash)**
-*Note: This is "Pay-as-you-go" on the Google Gemini Paid Tier.*
-
-**Input Cost (Text/Prompts):**
-- ~$0.10 per 1 million tokens.
-
-**Input Cost (Images):**
-- **Fixed Cost**: 258 tokens per image.
-- **Price**: (258 / 1,000,000) * $0.10 = **~$0.0000258 per image**.
-- **Efficiency**: The app synthesizes multiple pages into a **single request**, minimizing input token overhead.
-
-**Output Cost (Translation Text):**
-- **Rate**: ~$0.40 per 1 million tokens.
-- **Volume**: ~500 tokens (approx 400 words) per letter.
-- **Cost**: (500 / 1,000,000) * $0.40 = **~$0.0002 per letter**.
-
-**Monthly Projection:**
-- **Images**: 300 letters * 2 pages * $0.0000258 = **$0.015** (negligible)
-- **Text**: 300 letters * $0.0002 = **$0.06**
-- **Total AI Cost**: **<$1.00 / month** (Significant savings over Azure).
-
----
-
-## 3. Total Monthly Cost Comparison
-
-| Component | **Option A: "Start Free"** (Vercel + Supabase Free) | **Option B: "Production Ready"** (Vercel + Supabase Pro) | **Option C: "Hostinger"** (Hostinger + Supabase Pro) |
-| :--- | :--- | :--- | :--- |
-| **Frontend** | $0 (Vercel Free) | $0 (Vercel Free) | ~$4.99 (Hostinger VPS) |
-| **Backend/DB** | $0 (Supabase Free)* | $25 (Supabase Pro) | $25 (Supabase Pro) |
-| **AI Usage** | <$1.00 (Gemini) | <$1.00 (Gemini) | <$1.00 (Gemini) |
-| **TOTAL** | **~$1.00 / mo** | **~$26.00 / mo** | **~$30.99 / mo** |
-
-* *Option A risks hitting the 1GB storage limit in the first month. We recommend Option B for stability.*
-
----
-
-## 4. Architecture & Procedures
-
-### **Architecture**
-```mermaid
 graph TD
-    User_India((User - India)) -->|Edge Network| Vercel["Vercel (Frontend)<br/>React + Vite + TypeScript"]
-    User_Africa((User - Africa)) -->|Edge Network| Vercel
-    
-    Vercel -->|Auth/Data| Supabase["Supabase (Backend)<br/>PostgreSQL + Auth"]
-    
-    Vercel -->|API| Gemini["Google Gemini API<br/>Model: Gemini 2.0 Flash<br/>Processing: Single High-Fidelity Pass"]
-    
-    subgraph "Supabase Storage"
-        Pro_Tier["Pro Plan ($25/mo)<br/>Stores Letter Images"]
-    end
-    Supabase --> Pro_Tier
-```
+    A[User Browser/Mobile] -->|Upload Images| B(React Frontend - Vite)
+    B -->|Base64 Array| C[geminiService.ts]
+    C -->|Single High-Fidelity Pass| D{Google Gemini API}
+    D -->|JSON Response| C
+    C -->|Translation & Metadata| B
+    B -->|doc.save| E[Named PDF Export]
+    B -->|Metadata| F[(Supabase DB)]
+## 3. AI Processing Logic: "The Literal Scribe"
+The system utilizes a Single High-Fidelity Pass strategy to ensure multi-page synthesis and cultural accuracy:
 
-**System Flow:**
-1. **Client (React/Vite)**: User uploads images.
-2. **geminiService.ts**: Synthesizes images into a single `generateContent` payload to reduce overhead.
-3. **Google AI API**: Gemini 2.0 Flash processes the batch and returns JSON (Transcription + Translation).
-4. **Export**: Client generates a sanitized PDF report via `jspdf`.
-5. **Storage**: Metadata and valid translations are saved to Supabase (PostgreSQL).
+Multi-Page Synthesis: Combines up to 5 images into a single prompt to maintain narrative flow.
 
-### **Deployment Steps**
+Cultural Anchors: Specific prompt engineering to detect regional nuances:
 
-1.  **Frontend (Vercel)**
-    - Connect GitHub Repo `nestico/child-letter`.
-    - Add Env Vars from `.env`.
-    - **Why Vercel?** Better performance for 20 users spread across 3 continents due to Edge Network.
+Telugu: Hunts for "Sankranti holidays" and family specific greetings.
 
-2.  **Backend (Supabase)**
-    - **Action**: Upgrade to **Pro Plan ($25/mo)** immediately to handle Image Storage (100GB included).
-    - Or, configure **Lifecycle Policies** to auto-delete images after 30 days to stay on Free Tier (if history is not critical).
+Spanish: Identifies "Padrino/Madrina" relationships.
 
-3.  **AI (Azure)**
-    - Configure the `gpt-4o` deployment.
-    - Set a **Spending Limit** of $20/mo on the Azure subscription to prevent runaway costs.
+Persona Enforcement: Strictly enforced first-person translation to match the child's voice.
 
-### **Why NOT Hostinger?**
-For a React app with a global user base (Africa, India, Central America):
-1.  **Latency**: Hostinger Shared/VPS serves from a single physical location. A user in India accessing a server in the US will face lag. Vercel replicates your site to servers in Mumbai, Cape Town, and Sao Paulo instantly.
-2.  **Complexity**: Hostinger requires managing Node.js versions, Nginx configuration, and SSL certificates manually (on VPS). Vercel handles this automatically.
-3.  **Cost**: You pay ~$5-10/mo for Hostinger just to host static files, which Vercel does for free (or $20/mo for Pro with better SLAs).
+## 4. Stability & Rate Limit Management
+To operate reliably on the Gemini Paid Tier 1, the following mitigations are active:
 
----
+RPM Management: Hard limit of 10 Requests Per Minute (RPM).
 
-## 5. Deployment Presentation Prompts (Google NotebookLM)
+Exponential Backoff: Automatic retry logic implemented in geminiService.ts to handle 429 Too Many Requests errors.
 
-Use these prompts in Google NotebookLM (or ChatGPT/Gemini) to generate a professional presentation for your management team.
+Batching: Multi-page letters are sent as a single request to conserve quota and ensure synthesis.
 
-### **Prompt 1: Executive Summary & Architecture**
-> "Act as a Senior Cloud Architect. Create a slide presentation targeting IT Managers and Executives for the 'Letter Translator' project deployment.
-> 
-> **Context**: We are deploying a web app for 20 global users (Africa, India, Central America) to translate handwritten letters using Azure OpenAI.
-> **Architecture**:
-> 1. Frontend: React hosted on Vercel's Global Edge Network (ensuring low latency for global users).
-> 2. Backend: Supabase (PostgreSQL) for secure Auth and Database.
-> 3. AI: Azure OpenAI (GPT-4o) via secure API proxy for translation.
-> 
-> **Goal**: Explain why we chose this Serverless/CDN architecture over a traditional VPS (like Hostinger). Highlight benefits: Global speed, Zero maintenance, and Security."
+## 5. Cost Analysis Breakdown
+### A. Gemini 2.0 Flash Costs (Estimated)
+Gemini 2.0 Flash uses a token-based pricing model where images have a fixed token weight.
 
-### **Prompt 2: Cost Analysis & ROI**
-> "Create a financial breakdown slide for the 'Letter Translator' project.
-> **Usage Scenario**: 20 users, 300 total letter uploads/month.
-> 
-> **Compare two options**:
-> 1. **Recommended (Usage-Based)**: Vercel (Free) + Supabase Pro ($25) + Azure AI (~$6). Total: ~$31/month.
-> 2. **Traditional (VPS)**: Hostinger VPS ($8) + Supabase Pro ($25) + Azure AI (~$6) + DevOps Maintenance Time (estimated 5 hours/mo at $50/hr). Total: ~$39 + $250 labor = ~$289/month.
-> 
-> **Conclusion**: Emphasize that the Recommended Serverless option is 9x cheaper when factoring in maintenance time and offers 99.9% uptime SLA."
+| Item | Token Count | Cost (Input: $0.10/1M | Output: $0.40/1M) | | :--- | :--- | :--- | | Per Image | 258 Tokens | ~$0.000025 | | Avg. Letter (2 pgs) | 516 Input Tokens | ~$0.000051 | | Translation Output | ~700 Tokens | ~$0.00028 | | Total per Letter | ~1,216 Tokens | ~$0.00033 |
 
-### **Prompt 3: Security & Privacy**
-> "Draft a slide addressing Data Privacy and Security compliance.
-> Key Points:
-> - **Authentication**: Managed by Supabase (SOC2 compliant).
-> - **Data Storage**: Images stored in secure, private buckets (RLS policies enforced).
-> - **AI Privacy**: We use Azure OpenAI Service, which guarantees that **our data is NOT used to train OpenAI's public models**. This ensures beneficiary privacy.
-> - **Access Control**: Role-Based User Access (users only see their own translations)."
+Monthly Estimated Cost: For 300 uploads/month, the total AI cost is approximately $0.10 USD/month.
 
----
+### B. Hosting & Storage
+Frontend: Vercel/Netlify (Free Tier) - $0.00.
 
-## 6. Security, Privacy & Data Residency
+Database: Supabase (Free Tier) - $0.00.
 
-Given the sensitivity of collecting data from children, this architecture prioritizes **security, privacy, and compliance** at every layer.
+Total Monthly Operational Cost: <$1.00 USD.
 
-### **A. Data Residency (Canada/Global)**
-*   **Database & Storage (Supabase)**:
-    *   **Recommendation**: Select the **Canada (Central)** region (`ca-central-1`) when creating your Supabase project.
-    *   **Benefit**: Ensures all beneficiary data (names, IDs, letters) remains hosted on servers physically located in Canada, aligning with Canadian data sovereignty preferences for a `.ca` organization.
-    *   *Alternative*: US East (N. Virginia) is also available if preferred, but Canada is recommended for compliance.
+## 6. Deployment Workflow
+Environment Setup:
 
-### **B. Database Security Measures**
-*   **Row-Level Security (RLS)**:
-    *   **Implemented**: We strictly enforce RLS policies.
-    *   **Mechanism**: A user **CANNOT** query or view another user's uploads. The database rejects unauthorized requests at the engine level.
-    *   **Authentication**: Integrated with Supabase Auth (JWT tokens) ensuring only valid, logged-in personnel can access the API.
-*   **Encryption**:
-    *   **At Rest**: All data allowed in the database and storage buckets is encrypted on disk (AES-256).
-    *   **In Transit**: All traffic between the App, Supabase, and Azure is encrypted via TLS/SSL (HTTPS).
+VITE_GEMINI_API_KEY: Google AI Studio Key.
 
-### **C. AI Privacy (Azure OpenAI)**
-*   **Zero Data Training**:
-    *   **Policy**: Microsoft's Azure OpenAI Service strictly guarantees that **customer data is NOT used to train or improve their foundation models** (unlike the consumer ChatGPT).
-    *   **Privacy**: The letters sent to the AI for translation are processed in memory and discarded (stateless). They do not become part of the public knowledge base.
-*   **Content Filtering**:
-    *   **Safety**: Azure includes built-in content filtering to detect and block hate speech, violence, or sexual content, ensuring safe operation.
+VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY: Connection to metadata store.
 
-### **D. Recommended Additional Measures**
-*   **Data Retention Policy**:
-    *   Configure Supabase Storage objects to **auto-expire** after 30-90 days if long-term history is not legally required.
-*   **Audit Logs**:
-    *   Enable Supabase Access Logs to track who accessed which records and when (available on Pro Plan).
+Build: npm run build (Vite production build).
 
----
-
-## 7. Custom Domain Configuration
-
-You requested using the subdomain: **`letter-app.childrenbelieve.ca`**.
-**Yes, this is fully supported and recommended.**
-
-### **Integration Procedure (For IT Team)**
-
-1.  **Vercel Configuration**:
-    - In your Vercel Project Dashboard, go to **Settings > Domains**.
-    - Add `letter-app.childrenbelieve.ca`.
-    - Vercel will provide a **Value** specifically for your project (e.g., `cname.vercel-dns.com`).
-
-2.  **DNS Update (at childrenbelieve.ca provider)**:
-    - Your IT team needs to access the DNS settings for `childrenbelieve.ca`.
-    - **Add a CNAME Record**:
-        - **Type**: `CNAME`
-        - **Name/Host**: `letter-app` (this creates the subdomain part)
-        - **Value/Target**: `cname.vercel-dns.com` (Use the exact value Vercel gives you).
-
-3.  **Result**:
-    - Users can visit `https://letter-app.childrenbelieve.ca`.
-    - Vercel automatically issues and renews a **Free SSL Certificate** (HTTPS) for this subdomain.
-    - No manual server configuration is required.
+CI/CD: Automatic deployment to production branch via GitHub Actions.
