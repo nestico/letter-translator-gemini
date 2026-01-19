@@ -4,7 +4,7 @@
 
 **User Base:**
 - **Users**: ~20 active users (distributed across Africa, India, Central America).
-- **Activity**: ~10 letter uploads/day (Total = ~300 uploads/month).
+- **Activity**: ~65 letter uploads/day (Total = ~2,000 uploads/month).
 - **Platform**: Web-based (Mobile & Desktop).
 
 **Technical Needs:**
@@ -61,18 +61,18 @@ graph TD
 | **Output Text** | ~700 tokens | 700 tokens * ($0.40/1M) | ~$0.00028 |
 | **TOTAL** | **~1,716 Tokens** | | **~$0.00038 / letter** |
 
-**Monthly Projection (300 Letters):**
-- **Total AI Cost**: 300 * $0.00038 = **~$0.11 USD / month**.
+**Monthly Projection (2,000 Letters):**
+- **Total AI Cost**: 2,000 * $0.00038 = **~$0.76 USD / month**.
 
 ### **B. Hosting & Storage**
 | Component | Provider | Plan | Cost |
 | :--- | :--- | :--- | :--- |
-| **Frontend** | Vercel or Netlify | Free Tier | **$0.00** |
-| **Database** | Supabase | Free Tier* | **$0.00** |
+| **Frontend** | Vercel | Pro Plan | **$20.00** |
+| **Database** | Supabase | Pro Plan | **$25.00** |
 | **AI Compute** | Google Gemini | Pay-as-you-go | **<$1.00** |
-| **TOTAL** | | | **<$1.00 / month** |
+| **TOTAL** | | | **~$46.00 / month** |
 
-*\*Note: Supabase Free Tier includes 500MB database and 1GB file storage. If image storage needs exceed 1GB, a Pro plan ($25/mo) will be required.*
+*\*Note: At 2,000 letters/month (~10GB/mo of images), the Supabase Pro Plan is REQUIRED as it exceeds the Free Tier's 1GB limit.*
 
 ---
 
@@ -125,3 +125,59 @@ Given the sensitivity of collecting data from children, this architecture priori
     *   Configure Supabase Storage objects to **auto-expire** after 30-90 days if long-term history is not legally required.
 *   **Audit Logs**:
     *   Enable Supabase Access Logs to track who accessed which records and when (available on Pro Plan).
+
+---
+
+## 6. Deployment Steps
+
+1.  **Frontend (Vercel)**
+    -   **Connect Repo**: Link the `nestico/letter-translator-gemini` GitHub repository.
+    -   **Environment Variables**: Add the production keys:
+        -   `VITE_GEMINI_API_KEY`
+        -   `VITE_SUPABASE_URL`
+        -   `VITE_SUPABASE_ANON_KEY`
+    -   **Why Vercel?**: Leverage the Edge Network for performant delivery to users in Africa and India.
+
+2.  **Backend (Supabase)**
+    -   **Action**: Upgrade to **Pro Plan ($25/mo)** immediately to handle Image Storage (>1GB/mo).
+    -   **Data Residency**: Verify project region is **Canada (Central)**.
+    -   **Lifecycle (Optional)**: Configure storage buckets to auto-delete images after 90 days if strict retention policies apply.
+
+3.  **AI (Google Gemini)**
+    -   **Billing**: Ensure a payment method is attached to the Google Cloud Project to enable the **Paid Tier** (removing rate limits and data training).
+    -   **Budget**: Set a monthly budget cap of **$20.00** to prevent any unexpected runaway costs.
+
+---
+
+## 7. Deployment Presentation Prompts (Google NotebookLM)
+
+Use these prompts in Google NotebookLM (or ChatGPT/Gemini) to generate a professional presentation for your management team.
+
+### **Prompt 1: Executive Summary & Architecture**
+> "Act as a Senior Cloud Architect. Create a slide presentation targeting IT Managers and Executives for the 'Letter Translator' project deployment.
+> 
+> **Context**: We are deploying a web app for 20 global users (Africa, India, Central America) to translate 2,000 handwritten letters per month using Google Gemini AI.
+> **Architecture**:
+> 1. Frontend: React hosted on Vercel's Global Edge Network (ensuring low latency for global users).
+> 2. Backend: Supabase (PostgreSQL) for secure Auth and Database.
+> 3. AI: Google Gemini 2.0 Flash via secure API proxy for translation.
+> 
+> **Goal**: Explain why we chose this Serverless/CDN architecture over a traditional VPS. Highlight benefits: Global speed, Zero maintenance, and Security."
+
+### **Prompt 2: Cost Analysis & ROI (Scale: 2,000 Letters/Mo)**
+> "Create a financial breakdown slide for the 'Letter Translator' project.
+> **Usage Scenario**: 20 users, 2,000 total letter uploads/month.
+> 
+> **Compare two options**:
+> 1. **Recommended (Usage-Based)**: Vercel Pro ($20) + Supabase Pro ($25) + Gemini AI (<$1). Total: ~$46/month.
+> 2. **Traditional (VPS)**: Hostinger High-Spec VPS ($20) + Supabase Pro ($25) + DevOps Maintenance Time (estimated 10 hours/mo for patching/security at $50/hr). Total: ~$545/month.
+> 
+> **Conclusion**: Emphasize that the Recommended Serverless option is ~12x cheaper when factoring in maintenance time and offer 99.9% uptime SLA."
+
+### **Prompt 3: Security & Data Sovereignty**
+> "Draft a slide addressing Data Privacy and Security compliance for Canadian Data.
+> Key Points:
+> - **Authentication**: Managed by Supabase (SOC2 compliant).
+> - **Data Residency**: All database and image storage is hosted in Canada (Central) region.
+> - **AI Privacy**: We use Google Gemini Paid Tier, which guarantees **customer data is NOT used to train foundation models**.
+> - **Access Control**: Role-Based User Access (users only see their own translations)."
