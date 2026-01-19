@@ -220,7 +220,9 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
             pdfDoc.setFont("helvetica", "normal");
             pdfDoc.setTextColor(0);
 
-            const splitTranslation = pdfDoc.splitTextToSize(editedResult.translation, contentWidth);
+            // Sanitize text: Trim whitespace and limit massive newline gaps (max 2)
+            const cleanText = editedResult.translation.trim().replace(/\n{3,}/g, '\n\n');
+            const splitTranslation = pdfDoc.splitTextToSize(cleanText, contentWidth);
 
             splitTranslation.forEach((line: string) => {
                if (y > pageHeight - 20) {
