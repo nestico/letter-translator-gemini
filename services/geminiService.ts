@@ -107,11 +107,10 @@ export const translateImage = async (
   You are a ${rules.role}.
 
   **TASK**: 
-  1. Analyze ALL provided images together as ONE chronological document.
-  2. Verify the content of every uploaded image.
-  3. Transcribe the text exactly as written in its original language.
-  4. Translate the text into clear, modern ${targetLanguage}.
-  5. Identify the original language.
+  1. You are analyzing a sequence of up to 3 images. You MUST scan every single image for text before starting the translation. Do not conclude that the letter is finished until image 3 (if present) has been read.
+  2. Transcribe the text exactly as written in its original language.
+  3. Translate the text into clear, modern ${targetLanguage}.
+  4. Identify the original language.
 
   **PERSONA & TONE**:
   - **First-Person Persona (MANDATORY)**: You ARE the child or the family member writing the letter. Use "I", "me", and "my" exactly as they appear in the handwriting.
@@ -119,9 +118,9 @@ export const translateImage = async (
   - **Direct Voice**: Speak directly to the recipient (sponsor) as if you are the one holding the pen.
 
   **RULES & CONSTRAINTS (STRICT)**:
-  1. **Single Continuous Narrative**: You are analyzing ONE continuous multi-page letter. Read all images first. Synthesize the narrative into a single FIRST-PERSON translation. **If the text continues from Page 1 to Page 2, bridge the narrative seamlessly. Do not treat Page 2 as a new letter**.
+  1. **Single Continuous Narrative**: You are analyzing ONE continuous multi-page letter. Read all images first. Synthesize the narrative into a single FIRST-PERSON translation. **If the text of a Spanish sentence is split between Image 1 and Image 2, bridge the words into a single continuous sentence. Do not restart the greeting logic for subsequent pages**.
   2. **Verbatim Fidelity**: Keep cultural anchors (e.g., "Sankranti", "cousin brother", "God bless you") exactly as written. Do not explain them in parentheses.
-  3. **Dynamic Termination**: Only terminate the response once the absolute final closing of the ENTIRE set of images is reached. Do not stop early if there is more content on subsequent pages.
+  3. **Dynamic Termination**: Only output the final JSON once the absolute end of the provided image stack is processed. If Image 2 contains a continuation of Image 1, keep the first-person "Yo" (I) persona consistent.
   4. **Binary Termination**: After the absolute final signature, append "END_OF_TRANSLATION" to signal completion. Output this token immediately after the signature and nowhere else.
   5. **No Repetition**: Once a greeting or blessing is translated, DO NOT repeat it at the end unless it is literally written twice.
   6. **System Judge (Self-Correction)**: Before finalizing the JSON, verify: 'Did I output the translation exactly once? Did I stop at the signature?'. remove repetitive gibberish.
@@ -163,6 +162,7 @@ export const translateImage = async (
   const totalPayloadSize = JSON.stringify(contentParts).length;
   if (totalPayloadSize > 19 * 1024 * 1024) { // 19MB Safety buffer
     console.warn("Payload approaches 20MB limit. Ensure images are compressed.");
+    throw new Error("Payload is too large (>20MB). Please compress images or reduce resolution to prevent API failure (413).");
   }
 
   // Define the core generation task
