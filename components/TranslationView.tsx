@@ -591,8 +591,7 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                      </div>
 
                      <div className="flex flex-col gap-2 mb-8">
-                        <div className="grid grid-cols-1 gap-4">
-                           {/* Source Language Selection - Disabled to prevent errors, defaulting to Auto-Detect
+                        <div className="grid grid-cols-2 gap-4">
                            <div className="flex flex-col gap-2">
                               <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                                  Source Language
@@ -612,7 +611,6 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                                  </span>
                               </div>
                            </div>
-                           */}
                            <div className="flex flex-col gap-2">
                               <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                                  Target Language
@@ -620,16 +618,13 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                               <div className="relative">
                                  <select
                                     value={targetLanguage}
-                                    onChange={(e) => setTargetLanguage(e.target.value)}
-                                    className="w-full h-12 pl-4 pr-10 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg appearance-none text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                                    readOnly
+                                    disabled
+                                    className="w-full h-12 pl-4 pr-4 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg appearance-none text-slate-500 dark:text-slate-500 cursor-not-allowed outline-none"
                                  >
-                                    {LANGUAGES.filter(l => l !== 'Auto-Detect').map(lang => (
-                                       <option key={lang} value={lang}>{lang}</option>
-                                    ))}
+                                    <option value="English">English</option>
                                  </select>
-                                 <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-                                    expand_more
-                                 </span>
+                                 {/* Dropdown arrow removed for read-only look */}
                               </div>
                            </div>
                         </div>

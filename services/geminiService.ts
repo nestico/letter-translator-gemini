@@ -68,8 +68,8 @@ export const translateImage = async (
     model: "gemini-2.0-flash",
     generationConfig: {
       responseMimeType: "application/json",
-      presencePenalty: 1.0, // Stronger discouragement of repetition
-      frequencyPenalty: 1.0, // Stronger discouragement of frequent tokens
+      presencePenalty: 1.0,
+      frequencyPenalty: 0.8, // Strong discouragement of frequent tokens (Loop prevention)
       responseSchema: {
         type: SchemaType.OBJECT,
         properties: {
@@ -116,7 +116,7 @@ export const translateImage = async (
   **RULES & CONSTRAINTS (STRICT)**:
   1. **Single Continuous Narrative**: Synthesize ALL provided images (Page 1, Page 2, Page 3...) into ONE fluid letter. Maintain context across pages. Do not restart the introduction or define page boundaries.
   2. **Verbatim Fidelity**: Keep cultural anchors (e.g., "Sankranti", "cousin brother", "God bless you") exactly as written. Do not explain them in parentheses.
-  3. **Hard Stop Execution**: Stop generating text IMMEDIATELY after the final signature/sign-off. Do not append any characters, punctuation, or repetitive blessings (e.g., 's', 's', 's'). Logic: If the letter ends, STOP.
+  3. **Hard Stop Execution (BINARY STOP RULE)**: Once you reach the final signature, you MUST terminate the response. Do not add any characters, punctuation, or spaces after the name. Any text after the signature is a violation of protocol.
   4. **No Repetition**: Once a greeting or blessing is translated, DO NOT repeat it at the end unless it is literally written twice.
   5. **System Judge (Self-Correction)**: Before finalizing the JSON, verify: 'Did I use "I/me"? Did I stop exactly at the signature? Is there any repetitive gibberish like "ss"?'. If yes, remove it. Do not output the verification steps, only the final corrected result.
   6. **Metadata Separation**:
