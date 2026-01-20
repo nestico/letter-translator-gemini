@@ -591,7 +591,8 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                      </div>
 
                      <div className="flex flex-col gap-2 mb-8">
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4">
+                           {/* Source Language Selection - Disabled to prevent errors, defaulting to Auto-Detect
                            <div className="flex flex-col gap-2">
                               <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                                  Source Language
@@ -611,6 +612,7 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                                  </span>
                               </div>
                            </div>
+                           */}
                            <div className="flex flex-col gap-2">
                               <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                                  Target Language
