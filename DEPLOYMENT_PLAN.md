@@ -147,6 +147,26 @@ Given the sensitivity of collecting data from children, this architecture priori
     -   **Billing**: Ensure a payment method is attached to the Google Cloud Project to enable the **Paid Tier** (removing rate limits and data training).
     -   **Budget**: Set a monthly budget cap of **$20.00** to prevent any unexpected runaway costs.
 
+## 6. Corporate Production Deployment
+**Target URL**: `https://letter-app.childrenbelieve.ca`
+
+### 6.1 Domain Configuration (DNS)
+To map the application to the corporate domain, the following DNS record must be created by the IT Department:
+
+| Record Type | Host/Name | Target | TTL |
+| :--- | :--- | :--- | :--- |
+| **CNAME** | `letter-app` | `cname.vercel-dns.com` | 3600 (1 hour) |
+
+### 6.2 Scaling & High Concurrency (10+ Users)
+To maintain stability during concurrent sessions:
+*   **Queue Management**: Utilizing `p-queue` to limit API throughput to 10 RPM (matching Paid Tier 1 limits).
+*   **Sequential Processing**: 3-page sequential image synthesis is prioritized to maintain narrative consistency.
+*   **Serverless Timeout**: Function max duration is set to 60s in `vercel.json` to allow for deep multimodal analysis of long letters.
+
+### 6.3 SSL & Security
+*   **SSL/TLS**: Automated certificates via Let's Encrypt, managed by Vercel.
+*   **Data Residency**: Strict adherence to `ca-central-1` (Canada) for all database and file storage operations.
+
 ---
 
 ## 7. Deployment Presentation Prompts (Google NotebookLM)
