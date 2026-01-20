@@ -96,7 +96,7 @@ export const translateImage = async (
 
   const prompt = `
   You are a ${rules.role}.
-  
+
   **TASK**: 
   1. Analyze the provided handwritten letter images (which may span multiple pages).
   2. Transcribe the text exactly as written in its original language.
@@ -104,33 +104,31 @@ export const translateImage = async (
   4. Identify the original language.
 
   **PERSONA & TONE**:
-  - **First-Person Persona**: You ARE the child or the family member writing the letter. Use first-person pronouns (I, we, my) exactly as they appear in the handwriting. Never use "The child says..." or "She writes...".
-  - **First-Person Exit**: Sign off ONCE as the writer and then END the response.
-  - **Verbatim Translation**: Do not summarize, interpret, or provide context about the letter. Provide only the direct, warm translation of the words on the page.
+  - **First-Person Persona (MANDATORY)**: You ARE the child or the family member writing the letter. Use "I", "me", and "my" exactly as they appear in the handwriting.
+  - **PROHIBITED PHRASING**: NEVER use third-person phrases such as "The child says", "The boy mentions", "The writer is describing", "It is written that", or "She says".
+  - **Direct Voice**: Speak directly to the recipient (sponsor) as if you are the one holding the pen.
 
-  **RULES & CONSTRAINTS**:
-  - **Hard Stop**: Stop immediately after the final closing signature of the letter. Do not repeat greetings, blessings, or names.
-  - **Single High-Fidelity Pass**: Synthesize all pages into one coherent translation. Do not provide a summary or preview. Provide ONLY ONE continuous translation for all pages combined.
-  - **Singularity**: Provide exactly one version of the translation. Do not repeat the letter body. STOP immediately after the signature.
-  - **Merge Narratives**: Merge Page 1 and Page 2 into one continuous narrative without restarting the introduction.
-  - **Avoid Repetition**: Finish the letter naturally as it is written. Do not add repetitive blessings or greetings that are not present in the original text.
-  - **Metadata separation**: Extract metadata (Child Name, ID, Date) strictly into the 'headerInfo' JSON object. Do not repeat these details inside the 'translation' field.
-  - **Conciseness**: The total length of the naturalEnglish field must be proportionate to the source text. Do not hallucinate additional content.
-  - **Cultural Anchors**: Maintain strict fidelity to specific terms (e.g., 'Sankranti', 'cousin sister', 'cousin brother') as they appear in the text.
-  
-  - **Metadata Rules**: ${generalRules.special_instructions}
+  **RULES & CONSTRAINTS (STRICT)**:
+  1. **Single Continuous Narrative**: Merge all images into ONE fluid letter. Do not define page boundaries (e.g., "Page 1:", "Page 2:"). Flow naturally from the end of one page to the start of the next.
+  2. **Verbatim Fidelity**: Keep cultural anchors (e.g., "Sankranti", "cousin brother", "God bless you") exactly as written. Do not explain them in parentheses.
+  3. **Hard Stop Execution**: Stop generating text IMMEDIATELY after the final signature/sign-off. Do not repeat the greetings, do not add a "Summary", and do not add "Notes".
+  4. **No Repetition**: Once a greeting or blessing is translated, DO NOT repeat it at the end unless it is literally written twice.
+  5. **Metadata Separation**:
+     - Extract the Child's Name, Child ID, and Date ONLY into the 'headerInfo' JSON object.
+     - **CRITICAL**: Do NOT include these details in the 'translation' text field. The 'translation' field must start directly with the salutation (e.g., "Dear Sponsor...").
+
   - **Specific Instructions**: ${rules.special_instructions}
   - **NEGATIVE CONSTRAINTS**: ${[...generalRules.negative_constraints, ...rules.negative_constraints].join(", ")}.
 
   **OUTPUT FORMAT (JSON)**:
   {
     "headerInfo": {
-        "childId": "...",
-        "childName": "...",
-        "date": "..."
+        "childId": "ID found on letter...",
+        "childName": "Name found on letter...",
+        "date": "Date found on letter..."
     },
     "transcription": "Verbatim transcription in original script...",
-    "translation": "English translation (Metadata excluded)...",
+    "translation": "English translation starting with Dear Sponsor...",
     "detectedLanguage": "Language Name",
     "confidenceScore": 0.0 to 1.0
   }
