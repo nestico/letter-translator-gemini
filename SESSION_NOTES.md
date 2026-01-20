@@ -190,4 +190,25 @@
         - **Circuit Breaker**: Implemented `stopSequences: ["END_OF_TRANSLATION"]` in the model config to forcefully terminate generation.
         - **Binary Stop Rule**: Updated the system prompt to explicitly command "Output EXACTLY ONCE" and "STOP IMMEDIATELY after signature".
         - **Jittered Backoff**: Enhanced the retry logic with random jitter (0-1000ms) to prevent "thundering herd" API collisions during high traffic.
-        - **System Judge**: Added a self-verification step within the prompt ("Did I stop at the signature?") to force internal reasoning before output.
+
+### 17. Queue Management & Rate Protection
+- **Objective**: Protect the Gemini API from "Thundering Herd" events and ensuring fair access during high concurrency.
+- **Implementation**:
+    - **Queue Engine**: Integrated `p-queue` to manage outgoing requests.
+        - **Concurrency Limit**: **1** (Strict sequential processing per user session to prevent race conditions).
+        - **Rate Limit**: **10 requests per minute** (Global cap safety).
+    - **UI Feedback**: 
+        - **Dynamic Status**: Displays "Processing your letter... You are position #X in the queue."
+        - **Wait Estimation**: Real-time calculation "Estimated wait: ~[Position * 15] seconds".
+        - **Branding**: Updated loading spinner to Children Believe Purple (`#522d6d`).
+
+### 18. Multi-Page Fidelity Enhancements (Tamil & Spanish)
+- **Problem**: The AI was sometimes "lazy" (stopping after Page 1) or failing to stitch sentences across page boundaries in Spanish/Tamil.
+- **Solution**:
+    - **Global Scan Instruction**: Added mandatory rule: *"Scan every single image for text before starting... Do not conclude until image 3 is read."*
+    - **Sequential Stitching**: Explicit logic to bridge sentences split across pages (e.g., "Yo esp..." -> "...ero que estés bien").
+    - **Anti-Laziness Override**:
+        - **Temperature**: Raised to **1.0** (Gemini 2.0 Flash) to encourage fuller exploration of long contexts.
+        - **Dynamic Termination**: Replaced "Hard Stop" with *"Only terminate once the absolute final closing of the ENTIRE set is reached."*
+    - **Payload Safety**: Implemented a hard client-side check to throw an error if the image payload exceeds **20MB**, preventing silent `413` API failures.
+

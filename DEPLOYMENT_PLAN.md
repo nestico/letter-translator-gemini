@@ -208,3 +208,14 @@ Use these prompts in Google NotebookLM (or ChatGPT/Gemini) to generate a profess
 3.  **Accuracy Logic**:
     *   **System Judge**: Added a self-correction step in the prompt: *"Verify: Did I output the translation exactly once? Did I stop at the signature?"*.
     *   **Metadata Isolation**: Enforced strict separation of Child ID/Name into a separate JSON object to prevent leakage into the translation body.
+
+### **C. Queue & Multi-Page Fidelity (Update Jan 20 PM)**
+1.  **Request Queuing (Rate Protection)**:
+    *   **Architecture**: Implemented `p-queue` to manage API ingress.
+    *   **Traffic Shaping**: Limit **1 request** at a time per client (Sequential) with a global rate cap of **10 req/min**.
+    *   **User Feedback**: Added UI indicators for "Queue Position #X" and "Estimated Wait Time" to manage expectations.
+2.  **Anti-Laziness Strategy (Tamil/Spanish)**:
+    *   **Problem**: Gemini sometimes stopped after Page 1 or produced "lazy" summaries.
+    *   **Configuration**: Raised `temperature` to **1.0** to force context exploration.
+    *   **Prompting**: Added "Global Scan" instructions to read *all* images before writing, and "Sequential Stitching" logic to bridge sentences across pages.
+
