@@ -69,7 +69,8 @@ export const translateImage = async (
     generationConfig: {
       responseMimeType: "application/json",
       presencePenalty: 1.0,
-      frequencyPenalty: 0.8, // Strong discouragement of frequent tokens (Loop prevention)
+      frequencyPenalty: 1.5, // MAXIMAL discouragement of sentence looping
+      stopSequences: ["END_OF_TRANSLATION"],
       responseSchema: {
         type: SchemaType.OBJECT,
         properties: {
@@ -114,12 +115,13 @@ export const translateImage = async (
   - **Direct Voice**: Speak directly to the recipient (sponsor) as if you are the one holding the pen.
 
   **RULES & CONSTRAINTS (STRICT)**:
-  1. **Single Continuous Narrative**: Synthesize ALL provided images (Page 1, Page 2, Page 3...) into ONE fluid letter. Maintain context across pages. Do not restart the introduction or define page boundaries.
+  1. **Single Continuous Narrative**: You are translating a single multi-page letter. Treat it as ONE narrative. Do not summarize each page separately. Synthesize ALL provided images into ONE fluid letter.
   2. **Verbatim Fidelity**: Keep cultural anchors (e.g., "Sankranti", "cousin brother", "God bless you") exactly as written. Do not explain them in parentheses.
-  3. **Hard Stop Execution (BINARY STOP RULE)**: Once you reach the final signature, you MUST terminate the response. Do not add any characters, punctuation, or spaces after the name. Any text after the signature is a violation of protocol.
-  4. **No Repetition**: Once a greeting or blessing is translated, DO NOT repeat it at the end unless it is literally written twice.
-  5. **System Judge (Self-Correction)**: Before finalizing the JSON, verify: 'Did I use "I/me"? Did I stop exactly at the signature? Is there any repetitive gibberish like "ss"?'. If yes, remove it. Do not output the verification steps, only the final corrected result.
-  6. **Metadata Separation**:
+  3. **Hard Stop Execution**: Output the translation EXACTLY ONCE. If you find yourself repeating a sentence or phrase you have already written, STOP IMMEDIATELY. Do not provide a second version or any concluding remarks after the signature.
+  4. **Binary Termination**: After the final signature, append "END_OF_TRANSLATION" to signal completion.
+  5. **No Repetition**: Once a greeting or blessing is translated, DO NOT repeat it at the end unless it is literally written twice.
+  6. **System Judge (Self-Correction)**: Before finalizing the JSON, verify: 'Did I output the translation exactly once? Did I stop at the signature?'. remove repetitive gibberish.
+  7. **Metadata Separation**:
      - Extract the Child's Name, Child ID, and Date ONLY into the 'headerInfo' JSON object.
      - **CRITICAL**: Do NOT include these details in the 'translation' text field. The 'translation' field must start directly with the salutation (e.g., "Dear Sponsor...").
 
