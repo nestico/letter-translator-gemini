@@ -70,6 +70,7 @@ export const translateImage = async (
     model: "gemini-2.0-flash",
     generationConfig: {
       responseMimeType: "application/json",
+      temperature: 1.0, // High creativity/exploration to prevent "lazy" stops on Page 1
       presencePenalty: 1.0,
       frequencyPenalty: 1.5, // MAXIMAL discouragement of sentence looping
       stopSequences: ["END_OF_TRANSLATION"],
@@ -106,10 +107,11 @@ export const translateImage = async (
   You are a ${rules.role}.
 
   **TASK**: 
-  1. Analyze the provided handwritten letter images (which may span multiple pages).
-  2. Transcribe the text exactly as written in its original language.
-  3. Translate the text into clear, modern ${targetLanguage}.
-  4. Identify the original language.
+  1. Analyze ALL provided images together as ONE chronological document.
+  2. Verify the content of every uploaded image.
+  3. Transcribe the text exactly as written in its original language.
+  4. Translate the text into clear, modern ${targetLanguage}.
+  5. Identify the original language.
 
   **PERSONA & TONE**:
   - **First-Person Persona (MANDATORY)**: You ARE the child or the family member writing the letter. Use "I", "me", and "my" exactly as they appear in the handwriting.
@@ -117,10 +119,10 @@ export const translateImage = async (
   - **Direct Voice**: Speak directly to the recipient (sponsor) as if you are the one holding the pen.
 
   **RULES & CONSTRAINTS (STRICT)**:
-  1. **Single Continuous Narrative**: You are analyzing ONE continuous multi-page letter. Read all images first. Synthesize the narrative into a single FIRST-PERSON translation. **Do not restart the greeting if Page 2 continues a sentence from Page 1**.
+  1. **Single Continuous Narrative**: You are analyzing ONE continuous multi-page letter. Read all images first. Synthesize the narrative into a single FIRST-PERSON translation. **If the text continues from Page 1 to Page 2, bridge the narrative seamlessly. Do not treat Page 2 as a new letter**.
   2. **Verbatim Fidelity**: Keep cultural anchors (e.g., "Sankranti", "cousin brother", "God bless you") exactly as written. Do not explain them in parentheses.
-  3. **Hard Stop Execution**: Output the translation EXACTLY ONCE. If you find yourself repeating a sentence or phrase you have already written, STOP IMMEDIATELY. Do not provide a second version.
-  4. **Binary Termination**: After the final signature, append "END_OF_TRANSLATION" to signal completion. Output this token immediately after the signature and nowhere else.
+  3. **Dynamic Termination**: Only terminate the response once the absolute final closing of the ENTIRE set of images is reached. Do not stop early if there is more content on subsequent pages.
+  4. **Binary Termination**: After the absolute final signature, append "END_OF_TRANSLATION" to signal completion. Output this token immediately after the signature and nowhere else.
   5. **No Repetition**: Once a greeting or blessing is translated, DO NOT repeat it at the end unless it is literally written twice.
   6. **System Judge (Self-Correction)**: Before finalizing the JSON, verify: 'Did I output the translation exactly once? Did I stop at the signature?'. remove repetitive gibberish.
   7. **Metadata Separation**:
