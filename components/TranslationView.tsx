@@ -452,9 +452,14 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                         <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-6"></div>
                         <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Deciphering with Gemini AI</h3>
                         {queuePosition > 1 ? (
-                           <p className="text-slate-500 dark:text-slate-400 max-w-sm animate-pulse">
-                              Processing your letter... You are position <span className="font-bold text-primary">#{queuePosition}</span> in the queue.
-                           </p>
+                           <div className="flex flex-col gap-1 items-center animate-pulse">
+                              <p className="text-slate-500 dark:text-slate-400 max-w-sm">
+                                 Processing your letter... You are position <span className="font-bold text-primary">#{queuePosition}</span> in the queue.
+                              </p>
+                              <p className="text-sm font-medium text-slate-400 dark:text-slate-500">
+                                 Estimated wait: ~{queuePosition * 15} seconds
+                              </p>
+                           </div>
                         ) : (
                            <p className="text-slate-500 dark:text-slate-400 max-w-sm">
                               Google Gemini 2.0 Flash is analyzing the handwriting, transcribing the text, and translating it to {targetLanguage}.
