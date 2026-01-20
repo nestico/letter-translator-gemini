@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import { queueRequest } from "./queueService";
 
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
@@ -55,7 +56,8 @@ const generateWithRetry = async (model: any, contentParts: any[], retries = 3, i
 export const translateImage = async (
   images: { base64: string; mimeType: string }[],
   sourceLanguage: string = 'Auto-Detect',
-  targetLanguage: string = 'English'
+  targetLanguage: string = 'English',
+  onQueueUpdate?: (position: number) => void
 ) => {
   if (!apiKey) {
     throw new Error("Gemini API Key is missing. Please add VITE_GEMINI_API_KEY to your .env file.");
@@ -161,44 +163,57 @@ export const translateImage = async (
     console.warn("Payload approaches 20MB limit. Ensure images are compressed.");
   }
 
-  // Performance Monitoring
-  const startTime = performance.now();
-  console.log(`[Gemini] Starting request with ${images.length} images. Payload size: ~${(totalPayloadSize / 1024 / 1024).toFixed(2)}MB`);
-
-  try {
-    // Wrapped in retry logic
-    const result = await generateWithRetry(model, contentParts);
-
-    // Log Latency
-    const endTime = performance.now();
-    console.log(`[Gemini] Request completed in ${((endTime - startTime) / 1000).toFixed(2)}s`);
-
-    const response = await result.response;
-    let text = response.text();
-
-    // Safety Force-Close JSON if truncated
-    text = text.trim();
-    if (!text.endsWith("}")) {
-      console.warn("JSON response incomplete. Attempting to force-close...");
-      // If it looks like it was cut off in a string value
-      if (text.lastIndexOf('"') > text.lastIndexOf('}')) {
-        text += '"}';
-      } else {
-        text += '}';
-      }
-    }
+  // Define the core generation task
+  const generateTask = async () => {
+    // Performance Monitoring
+    const startTime = performance.now();
+    console.log(`[Gemini] Starting request with ${images.length} images. Payload size: ~${(totalPayloadSize / 1024 / 1024).toFixed(2)}MB`);
 
     try {
-      return JSON.parse(text);
-    } catch (parseError) {
-      console.error("JSON Parse Failed on:", text);
-      throw new Error("Failed to parse Gemini response. The output may have been truncated.");
-    }
+      // Wrapped in retry logic
+      const result = await generateWithRetry(model, contentParts);
 
-  } catch (error) {
-    console.error("Gemini Translation Error:", error);
-    throw error;
+      // Log Latency
+      const endTime = performance.now();
+      console.log(`[Gemini] Request completed in ${((endTime - startTime) / 1000).toFixed(2)}s`);
+
+      const response = await result.response;
+      let text = response.text();
+
+      // Safety Force-Close JSON if truncated
+      text = text.trim();
+      if (!text.endsWith("}")) {
+        console.warn("JSON response incomplete. Attempting to force-close...");
+        // If it looks like it was cut off in a string value
+        if (text.lastIndexOf('"') > text.lastIndexOf('}')) {
+          text += '"}';
+        } else {
+          text += '}';
+        }
+      }
+
+      try {
+        return JSON.parse(text);
+      } catch (parseError) {
+        console.error("JSON Parse Failed on:", text);
+        throw new Error("Failed to parse Gemini response. The output may have been truncated.");
+      }
+
+    } catch (error) {
+      console.error("Gemini Translation Error:", error);
+      throw error;
+    }
+  };
+
+  // Submit to Queue
+  const { result, position } = queueRequest(generateTask);
+
+  // Notify UI of queue position
+  if (onQueueUpdate) {
+    onQueueUpdate(position);
   }
+
+  return result;
 };
 
 export const createChatSession = () => {

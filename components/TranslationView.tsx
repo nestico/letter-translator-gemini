@@ -17,6 +17,8 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
    const [isProcessing, setIsProcessing] = useState(false);
    const [isEditing, setIsEditing] = useState(false);
    const [showLanguageConfirm, setShowLanguageConfirm] = useState(false);
+   const [queuePosition, setQueuePosition] = useState<number>(0);
+
    const [showExportModal, setShowExportModal] = useState(false);
    const [exportFormat, setExportFormat] = useState<'pdf' | 'txt'>('pdf');
    const [exportFileName, setExportFileName] = useState('letter_translation');
@@ -449,9 +451,15 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                      <div className="h-full flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-300">
                         <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-6"></div>
                         <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Deciphering with Gemini AI</h3>
-                        <p className="text-slate-500 dark:text-slate-400 max-w-sm">
-                           Google Gemini 2.0 Flash is analyzing the handwriting, transcribing the text, and translating it to {targetLanguage}.
-                        </p>
+                        {queuePosition > 1 ? (
+                           <p className="text-slate-500 dark:text-slate-400 max-w-sm animate-pulse">
+                              Processing your letter... You are position <span className="font-bold text-primary">#{queuePosition}</span> in the queue.
+                           </p>
+                        ) : (
+                           <p className="text-slate-500 dark:text-slate-400 max-w-sm">
+                              Google Gemini 2.0 Flash is analyzing the handwriting, transcribing the text, and translating it to {targetLanguage}.
+                           </p>
+                        )}
                         <div className="flex gap-2 mt-6">
                            <span className="w-2 h-2 rounded-full bg-primary animate-bounce"></span>
                            <span className="w-2 h-2 rounded-full bg-primary animate-bounce delay-150"></span>
