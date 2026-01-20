@@ -173,3 +173,21 @@
     - **Batch Processing**: Ensured all pages of a multi-page letter are sent in a **single API request** to minimize call count and maintain narrative continuity.
     - **Error Handling**: Added fallback logic to manually repair truncated JSON responses if the AI output is cut off.
 
+
+# Session Notes - Jan 20, 2026
+
+### 16. Technical Overhaul & Rebranding ("Children Believe")
+- **Objective**: Align the UI with the new organizational identity ("Children Believe") and solve critical technical issues regarding AI looping and concurrency.
+- **UI/UX Changes**:
+    - **Rebranding**: Complete UI overhaul including a white sticky navbar, official logo integration, and updated brand color palette (Purple `#522d6d` & Green Actions).
+    - **Language Controls**:
+        - **Source Language**: Restored the dropdown to allow explicit selection, crucial for differentiating dialects (e.g., Telugu vs. Tamil).
+        - **Target Language**: Locked to "English" (Read-Only) to strictly enforce the "English-First" output requirement.
+- **Gemini Engine Optimization**:
+    - **Issue**: The AI was entering infinite character loops (e.g., "s's's's") and failing under concurrent load.
+    - **Solution (The "Hard Hard" Override)**:
+        - **Maximal Penalties**: Increased `frequencyPenalty` to **1.5** and `presencePenalty` to **1.0** to mathematically forbid repetition.
+        - **Circuit Breaker**: Implemented `stopSequences: ["END_OF_TRANSLATION"]` in the model config to forcefully terminate generation.
+        - **Binary Stop Rule**: Updated the system prompt to explicitly command "Output EXACTLY ONCE" and "STOP IMMEDIATELY after signature".
+        - **Jittered Backoff**: Enhanced the retry logic with random jitter (0-1000ms) to prevent "thundering herd" API collisions during high traffic.
+        - **System Judge**: Added a self-verification step within the prompt ("Did I stop at the signature?") to force internal reasoning before output.
