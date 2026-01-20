@@ -33,15 +33,20 @@ const generateWithRetry = async (model: any, contentParts: any[], retries = 3, i
       return result;
     } catch (error: any) {
       const isRateLimit = error.message?.includes('429') || error.status === 429;
+      const isOverloaded = error.message?.includes('503') || error.status === 503;
 
-      if (isRateLimit && i < retries - 1) {
-        const delay = initialDelay * Math.pow(2, i);
-        console.warn(`Gemini 429 Rate Limit hit. Retrying in ${delay}ms... (Attempt ${i + 1}/${retries})`);
+      if ((isRateLimit || isOverloaded) && i < retries - 1) {
+        // Exponential Backoff + Jitter (Prevent Thundering Herd)
+        // Base delay * 2^retries + random jitter (0-1000ms)
+        const jitter = Math.random() * 1000;
+        const delay = (initialDelay * Math.pow(2, i)) + jitter;
+
+        console.warn(`Gemini Busy (429/503). Retrying in ${Math.round(delay)}ms... (Attempt ${i + 1}/${retries})`);
         await new Promise(resolve => setTimeout(resolve, delay));
         continue;
       }
 
-      // If not rate limit or last retry, throw
+      // If not retryable or max retries reached, throw
       throw error;
     }
   }
@@ -109,10 +114,11 @@ export const translateImage = async (
   - **Direct Voice**: Speak directly to the recipient (sponsor) as if you are the one holding the pen.
 
   **RULES & CONSTRAINTS (STRICT)**:
-  1. **Single Continuous Narrative**: Merge all images into ONE fluid letter. Do not define page boundaries (e.g., "Page 1:", "Page 2:"). Flow naturally from the end of one page to the start of the next.
+  1. **Single Continuous Narrative**: Synthesize ALL provided images (Page 1, Page 2, Page 3...) into ONE fluid letter. Maintain context across pages. Do not restart the introduction or define page boundaries.
   2. **Verbatim Fidelity**: Keep cultural anchors (e.g., "Sankranti", "cousin brother", "God bless you") exactly as written. Do not explain them in parentheses.
   3. **Hard Stop Execution**: Stop generating text IMMEDIATELY after the final signature/sign-off. Do not repeat the greetings, do not add a "Summary", and do not add "Notes".
   4. **No Repetition**: Once a greeting or blessing is translated, DO NOT repeat it at the end unless it is literally written twice.
+  5. **System Judge (Self-Correction)**: Before finalizing the JSON, verify: 'Did I use "I/me"? Did I stop exactly at the signature? Did I merge all pages?'. Do not output the verification steps, only the final corrected result.
   5. **Metadata Separation**:
      - Extract the Child's Name, Child ID, and Date ONLY into the 'headerInfo' JSON object.
      - **CRITICAL**: Do NOT include these details in the 'translation' text field. The 'translation' field must start directly with the salutation (e.g., "Dear Sponsor...").
@@ -147,9 +153,24 @@ export const translateImage = async (
     });
   });
 
+  // Calculate approximate size (Base64 is ~1.33x original). Guard against huge payloads.
+  const totalPayloadSize = JSON.stringify(contentParts).length;
+  if (totalPayloadSize > 19 * 1024 * 1024) { // 19MB Safety buffer
+    console.warn("Payload approaches 20MB limit. Ensure images are compressed.");
+  }
+
+  // Performance Monitoring
+  const startTime = performance.now();
+  console.log(`[Gemini] Starting request with ${images.length} images. Payload size: ~${(totalPayloadSize / 1024 / 1024).toFixed(2)}MB`);
+
   try {
     // Wrapped in retry logic
     const result = await generateWithRetry(model, contentParts);
+
+    // Log Latency
+    const endTime = performance.now();
+    console.log(`[Gemini] Request completed in ${((endTime - startTime) / 1000).toFixed(2)}s`);
+
     const response = await result.response;
     let text = response.text();
 
