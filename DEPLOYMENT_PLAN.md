@@ -181,3 +181,30 @@ Use these prompts in Google NotebookLM (or ChatGPT/Gemini) to generate a profess
 > - **Data Residency**: All database and image storage is hosted in Canada (Central) region.
 > - **AI Privacy**: We use Google Gemini Paid Tier, which guarantees **customer data is NOT used to train foundation models**.
 > - **Access Control**: Role-Based User Access (users only see their own translations)."
+
+---
+
+## 8. Session Log: Technical Overhaul (Jan 20, 2026)
+
+### **A. Branding & UI Updates**
+1.  **Rebranding**: Scaled the UI to match "Children Believe" identity.
+    *   **Navbar**: Implemented a white, sticky navbar (`z-50`) with the official logo (`h-12`).
+    *   **Colors**: Updated primary actions to use brand purple (`#522d6d`) and simplified the color palette.
+    *   **Hero**: Cleaned up the landing area, removing redundant logos and reverting to a stable dark/light theme structure.
+2.  **Language Selection Control**:
+    *   **Source Language**: Restored the dropdown to allow explicit user selection (e.g., Telugu, Spanish), improving AI accuracy.
+    *   **Target Language**: Locked to "English" (Disabled/Read-Only) to prevent misconfiguration.
+
+### **B. Gemini Service Optimization (High Concurrency)**
+1.  **Repetition Loop Fix**:
+    *   **Problem**: The model was entering infinite character loops (e.g., "s's's's") during PDF export.
+    *   **Solution**:
+        *   **Maximal Penalties**: Increased `frequencyPenalty` to **1.5** and `presencePenalty` to **1.0**.
+        *   **Stop Sequences**: Configured `stopSequences: ["END_OF_TRANSLATION"]` as a hard circuit breaker.
+        *   **Binary Stop Rule**: Updated prompt to strictly command: *"Output EXACTLY ONCE... STOP IMMEDIATELY after signature"*.
+2.  **Concurrency Management**:
+    *   **Jittered Backoff**: Enhanced `generateWithRetry` to include random jitter (0-1000ms). This prevents "thundering herd" issues where multiple users hitting a rate limit retry at the exact same millisecond.
+    *   **Payload Protection**: Added a client-side check to warn if image payloads exceed **20MB** (preventing `413` errors).
+3.  **Accuracy Logic**:
+    *   **System Judge**: Added a self-correction step in the prompt: *"Verify: Did I output the translation exactly once? Did I stop at the signature?"*.
+    *   **Metadata Isolation**: Enforced strict separation of Child ID/Name into a separate JSON object to prevent leakage into the translation body.
