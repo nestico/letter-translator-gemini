@@ -212,3 +212,14 @@
         - **Dynamic Termination**: Replaced "Hard Stop" with *"Only terminate once the absolute final closing of the ENTIRE set is reached."*
     - **Payload Safety**: Implemented a hard client-side check to throw an error if the image payload exceeds **20MB**, preventing silent `413` API failures.
 
+# Session Notes - Jan 29, 2026
+
+### 19. UI Theme Shift: Light Mode
+- **Objective**: Switch the application's visual theme from Dark Mode (Black Background) to Light Mode (White Background) while retaining the "Children Believe" purple identity.
+- **Changes**:
+    - **Global Theme**: Removed `dark` class from `<html>` to enforce Tailwind's light mode defaults.
+    - **Color Palette**: Updated `background-light` in Tailwind config to pure `#ffffff` (White) from `#f6f6f8` (Off-White).
+    - **Typography**: Text automatically shifted to `slate-900` (Black) and `slate-500` (Dark Gray), appearing crisp against the white background.
+    - **Accents**: Retained `primary` color (`#522d6d` Purple) for buttons, icons, and highlights to maintain brand consistency.
+
+
