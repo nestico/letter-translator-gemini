@@ -108,9 +108,9 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
 
       setIsSaving(true);
       // Safety timeout: 15 seconds max for saving. 
-      // Force reset isSaving to false if it takes too long.
       const timeoutId = setTimeout(() => {
          setIsSaving(false);
+         alert("Save operation timed out. Please check your internet connection and try again.");
          console.error("Save operation timed out - force resetting button state");
       }, 15000);
 
@@ -124,7 +124,6 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
             targetLanguage
          );
 
-         clearTimeout(timeoutId);
          if (saved) {
             setHasSaved(true);
             if (error?.includes("Low confidence")) setError(null);
@@ -132,10 +131,10 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
             alert("Could not save to history. Please check your connection.");
          }
       } catch (err) {
-         clearTimeout(timeoutId);
          console.error("Failed to save:", err);
          alert("Could not save to history. Please try again.");
       } finally {
+         clearTimeout(timeoutId);
          setIsSaving(false);
       }
    };
