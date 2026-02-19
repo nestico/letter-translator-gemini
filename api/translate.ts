@@ -103,9 +103,10 @@ export default async function handler(req: any, res: any) {
 
   **INSTRUCTIONS**:
   1. **Read ALL Images**: Analyze up to 3 images as ONE continuous letter.
-  2. **Single Translation**: Output exactly ONE continuous English translation. Do NOT repeat the translation or loop the content.
-  3. **No Redundancy**: If a "Dear Sponsor" greeting appears on Page 1, do not invent a second greeting for Page 2.
-  4. **Verification**: After translating, check: "Is there any non-English script in the translation? Is the text repeating?". Remove any script markers and repetitions.
+  2. **Single Translation**: Output exactly ONE continuous English translation.
+  3. **ABSOLUTE REPETITION BAN**: Do NOT repeat paragraphs, sentences, or phrases. If you start to repeat the same information (e.g. "I am fine... I am fine..."), STOP and move to the next information or end the response.
+  4. **No Redundancy**: If a "Dear Sponsor" greeting appears on Page 1, do not invent a second greeting for Page 2.
+  5. **Verification**: After translating, check: "Did I repeat any sentence? Is there non-English script?". Remove any repetitions before outputting JSON.
 
   **SPECIFIC RULES**: ${rules.special_instructions}
   **NEGATIVE CONSTRAINTS**: ${[...generalRules.negative_constraints, ...rules.negative_constraints].join(", ")}.

@@ -40,7 +40,7 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
    }, [user]);
 
    const LANGUAGES = [
-      'Auto-Detect', '(NIC) Spanish', '(HND) Spanish', '(PRY) Spanish', '(BFA) French', '(GHA) English', '(IND) Telugu', '(IND) Tamil', 'German', 'Italian', '(BRA) Portuguese', 'Latin', 'Dutch', 'Russian', 'Chinese', 'Japanese', '(ETH) Amharic', '(ETH) Afan Oromo'
+      'Auto-Detect', '(nic) spanish', '(BFA) French', '(CAN) English', '(Ind) Telugu', '(ind) Tamil', '(ETH) Amharic', '(ETH) Afan Oromo', '(HND) Spanish', '(PRY) Spanish', 'German', 'Italian', '(BRA) Portuguese', 'Latin', 'Dutch', 'Russian', 'Chinese', 'Japanese'
    ];
 
    const handleProcessStart = () => {
@@ -107,12 +107,11 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
       if (!user || !editedResult || hasSaved || isSaving) return;
 
       setIsSaving(true);
-      // Safety timeout: 15 seconds max for saving
+      // Safety timeout: 15 seconds max for saving. 
+      // Force reset isSaving to false if it takes too long.
       const timeoutId = setTimeout(() => {
-         if (isSaving) {
-            setIsSaving(false);
-            console.error("Save operation timed out");
-         }
+         setIsSaving(false);
+         console.error("Save operation timed out - force resetting button state");
       }, 15000);
 
       try {
