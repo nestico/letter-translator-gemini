@@ -97,7 +97,7 @@ export default async function handler(req: any, res: any) {
   You are a ${rules.role}.
 
   **TASK**: 
-  1. You are analyzing a sequence of up to 3 images. You MUST scan every single image for text before starting the translation. Do not conclude that the letter is finished until image 3 (if present) has been read.
+  1. You are analyzing a sequence of up to 3 images. You MUST scan every single image for text before starting the translation.
   2. Transcribe the text exactly as written in its original language.
   3. Translate the text into clear, modern ${targetLanguage}.
   4. Identify the original language.
@@ -108,15 +108,14 @@ export default async function handler(req: any, res: any) {
   - **Direct Voice**: Speak directly to the recipient (sponsor) as if you are the one holding the pen.
 
   **RULES & CONSTRAINTS (STRICT)**:
-  1. **Single Continuous Narrative**: You are analyzing ONE continuous multi-page letter. Read all images first. Synthesize the narrative into a single FIRST-PERSON translation. **If the text of a Spanish sentence is split between Image 1 and Image 2, bridge the words into a single continuous sentence. Do not restart the greeting logic for subsequent pages**.
+  1. **Single Continuous Narrative**: You are analyzing ONE continuous multi-page letter. Read all images first. Synthesize the narrative into a single FIRST-PERSON translation. Do not restart the greeting logic for subsequent pages. If the letter spans multiple pages, combine them into one seamless English message.
   2. **Verbatim Fidelity**: Keep cultural anchors (e.g., "Sankranti", "cousin brother", "God bless you") exactly as written. Do not explain them in parentheses.
-  3. **Dynamic Termination**: Only output the final JSON once the absolute end of the provided image stack is processed. If Image 2 contains a continuation of Image 1, keep the first-person "Yo" (I) persona consistent.
-  4. **Binary Termination**: After the absolute final signature, append "END_OF_TRANSLATION" to signal completion. Output this token immediately after the signature and nowhere else.
-  5. **No Repetition**: Once a greeting or blessing is translated, DO NOT repeat it at the end unless it is literally written twice.
-  6. **System Judge (Self-Correction)**: Before finalizing the JSON, verify: 'Did I output the translation exactly once? Did I stop at the signature?'. remove repetitive gibberish.
-  7. **Metadata Separation**:
-     - Extract the Child's Name, Child ID, and Date ONLY into the 'headerInfo' JSON object.
-     - **CRITICAL**: Do NOT include these details in the 'translation' text field. The 'translation' field must start directly with the salutation (e.g., "Dear Sponsor...").
+  3. **No Repetition**: Once a greeting or blessing is translated, DO NOT repeat it at the end unless it is literally written twice.
+  4. **Strictest Script Separation**:
+     - **transcription** field: Must contain ONLY the original script (e.g. Telugu, Amharic). Surround page breaks with [Page 1], [Page 2].
+     - **translation** field: Must contain ONLY ${targetLanguage}. **PROHIBITED**: Do NOT include any characters from the original script (Telugu/Amharic/etc.) inside the translation field. If you merge them, the system fails.
+  5. **Metadata Separation**:
+     - Extract the Child's Name, Child ID, and Date ONLY into the 'headerInfo' JSON object. Do NOT include these in the 'translation' text.
 
   - **Specific Instructions**: ${rules.special_instructions}
   - **NEGATIVE CONSTRAINTS**: ${[...generalRules.negative_constraints, ...rules.negative_constraints].join(", ")}.

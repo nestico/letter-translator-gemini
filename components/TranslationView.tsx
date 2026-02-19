@@ -107,6 +107,14 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
       if (!user || !editedResult || hasSaved || isSaving) return;
 
       setIsSaving(true);
+      // Safety timeout: 15 seconds max for saving
+      const timeoutId = setTimeout(() => {
+         if (isSaving) {
+            setIsSaving(false);
+            console.error("Save operation timed out");
+         }
+      }, 15000);
+
       try {
          const saved = await saveTranslation(
             user.id,
@@ -117,12 +125,15 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
             targetLanguage
          );
 
+         clearTimeout(timeoutId);
          if (saved) {
             setHasSaved(true);
-            // Optional: reset error if it was just a warning
             if (error?.includes("Low confidence")) setError(null);
+         } else {
+            alert("Could not save to history. Please check your connection.");
          }
       } catch (err) {
+         clearTimeout(timeoutId);
          console.error("Failed to save:", err);
          alert("Could not save to history. Please try again.");
       } finally {
@@ -189,73 +200,87 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
 
             const logoBase64 = await loadLogo();
 
-            // Loop through all images
+            // 1. ADD IMAGES (One per page)
             for (let i = 0; i < images.length; i++) {
                if (i > 0) pdfDoc.addPage();
 
-               let y = 20;
+               // Add Child ID at top
+               const imageId = images[i].file.name.replace(/\.[^/.]+$/, "");
+               pdfDoc.setFontSize(10);
+               pdfDoc.setFont("helvetica", "normal");
+               pdfDoc.setTextColor(100);
+               pdfDoc.text(`Child ID: ${imageId} | Page ${i + 1} of ${images.length}`, margin, 15);
 
-               // --- HEADER WITH LOGO ---
+               // Add Logo small in corner
                if (logoBase64) {
-                  const logoW = 30;
-                  const logoH = 30;
-                  pdfDoc.addImage(logoBase64, 'PNG', pageWidth - margin - logoW, 10, logoW, logoH);
+                  pdfDoc.addImage(logoBase64, 'PNG', pageWidth - margin - 15, 8, 15, 15);
                }
 
-               // --- Original Image ---
                const { data: imgData, type: imgType } = await loadImageBase64(images[i].file);
 
-               // Calculate numeric aspect ratio
-               const imgObj = new Image();
-               imgObj.src = imgData;
-               await new Promise((resolve) => { imgObj.onload = resolve; });
-
+               // Calculate dimensions to fit 85% of page height
                const imgProps = pdfDoc.getImageProperties(imgData);
                const imgRatio = imgProps.width / imgProps.height;
 
-               let finalImgWidth = contentWidth;
-               let finalImgHeight = contentWidth / imgRatio;
+               let finalW = contentWidth;
+               let finalH = contentWidth / imgRatio;
 
-               // Allow image to take up to 60% of the page height
-               const maxHeight = pageHeight * 0.60;
-               if (finalImgHeight > maxHeight) {
-                  finalImgHeight = maxHeight;
-                  finalImgWidth = maxHeight * imgRatio;
+               const maxH = pageHeight - 40; // Leave room for headers/footers
+               if (finalH > maxH) {
+                  finalH = maxH;
+                  finalW = maxH * imgRatio;
                }
 
-               // Center image
-               const xOffset = margin + ((contentWidth - finalImgWidth) / 2);
-
-               // Add ID Header above image
-               const imageId = images[i].file.name.replace(/\.[^/.]+$/, "");
-               pdfDoc.setFontSize(14);
-               pdfDoc.setFont("helvetica", "bold");
-               pdfDoc.setTextColor(0);
-               pdfDoc.text(`Child ID: ${imageId} (Page ${i + 1})`, margin, y + 10);
-
-               y = 50;
-
-               pdfDoc.addImage(imgData, imgType.includes('png') ? 'PNG' : 'JPEG', xOffset, y, finalImgWidth, finalImgHeight);
-
-               // Only add translation on the LAST page? Or start new page?
-               // Request said "add them to the output pdf" (images).
-               // Let's add translation after the LAST image, on a new page.
+               const xCentered = margin + (contentWidth - finalW) / 2;
+               pdfDoc.addImage(imgData, imgType.includes('png') ? 'PNG' : 'JPEG', xCentered, 25, finalW, finalH);
             }
 
-            // --- Translation on New Page ---
+            // 2. ADD TRANSLATION (Starts on new page)
             pdfDoc.addPage();
             let y = 20;
 
+            // Logo on Translation Page
+            if (logoBase64) {
+               pdfDoc.addImage(logoBase64, 'PNG', margin, y, 20, 20);
+               y += 25;
+            }
+
+            pdfDoc.setFontSize(18);
+            pdfDoc.setFont("helvetica", "bold");
+            pdfDoc.setTextColor(0);
+            pdfDoc.text("Letter Translation", margin, y);
+            y += 12;
+
+            // Header Info
+            if (editedResult.headerInfo) {
+               pdfDoc.setFontSize(10);
+               pdfDoc.setFont("helvetica", "normal");
+               pdfDoc.text(`Child Name: ${editedResult.headerInfo.childName || 'N/A'}`, margin, y);
+               pdfDoc.text(`Child ID: ${editedResult.headerInfo.childId || 'N/A'}`, margin + 60, y);
+               pdfDoc.text(`Date: ${editedResult.headerInfo.date || 'N/A'}`, margin + 120, y);
+               y += 10;
+            }
+
+            pdfDoc.setLineWidth(0.5);
+            pdfDoc.line(margin, y, pageWidth - margin, y);
+            y += 15;
+
             pdfDoc.setFontSize(12);
             pdfDoc.setFont("helvetica", "normal");
-            pdfDoc.setTextColor(0);
+            pdfDoc.setTextColor(30);
 
-            // Sanitize text: Trim whitespace and limit massive newline gaps (max 2)
-            const cleanText = editedResult.translation.trim().replace(/\n{3,}/g, '\n\n');
-            const splitTranslation = pdfDoc.splitTextToSize(cleanText, contentWidth);
+            // SANITIZATION: Strip non-Latin characters from translation for PDF
+            // jsPDF default fonts crash/show gibberish with Telugu/Amharic.
+            // We keep only standard English/Latin characters for the PDF version.
+            const safeTranslation = editedResult.translation
+               .replace(/[^\x00-\x7F\xA0-\xFF]/g, '') // Keep ASCII and extended Latin
+               .trim()
+               .replace(/\n{3,}/g, '\n\n');
 
-            splitTranslation.forEach((line: string) => {
-               if (y > pageHeight - 20) {
+            const splitText = pdfDoc.splitTextToSize(safeTranslation, contentWidth);
+
+            splitText.forEach((line: string) => {
+               if (y > pageHeight - 30) {
                   pdfDoc.addPage();
                   y = 20;
                }
@@ -263,21 +288,22 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                y += 7;
             });
 
-            y += 10;
+            // Footer
+            y += 15;
             if (y > pageHeight - 20) {
                pdfDoc.addPage();
                y = 20;
             }
-
             const dateStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
             pdfDoc.setFont("helvetica", "italic");
             pdfDoc.setFontSize(10);
-            pdfDoc.text(dateStr, margin, y);
-            y += 6;
-            pdfDoc.text(`Translated by ${translatorName || 'Children Believe AI'}`, margin, y);
+            pdfDoc.setTextColor(100);
+            pdfDoc.text(`Date Translated: ${dateStr}`, margin, y);
+            y += 5;
+            pdfDoc.text(`Translated by: ${translatorName || 'Children Believe AI'}`, margin, y);
 
          } catch (e) {
-            console.error(e);
+            console.error("PDF Logic Failure:", e);
             alert("Error generating PDF: " + (e as Error).message);
             return;
          }
