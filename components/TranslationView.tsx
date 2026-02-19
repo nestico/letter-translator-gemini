@@ -204,12 +204,14 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
             for (let i = 0; i < images.length; i++) {
                if (i > 0) pdfDoc.addPage();
 
-               // Add Child ID at top
-               const imageId = images[i].file.name.replace(/\.[^/.]+$/, "");
-               pdfDoc.setFontSize(10);
-               pdfDoc.setFont("helvetica", "normal");
-               pdfDoc.setTextColor(100);
-               pdfDoc.text(`Child ID: ${imageId} | Page ${i + 1} of ${images.length}`, margin, 15);
+               // Add Custom File Name at top ONLY on first page
+               if (i === 0) {
+                  const displayFileName = exportFileName.trim().replace(/\.[^/.]+$/, "") || 'letter_translation';
+                  pdfDoc.setFontSize(10);
+                  pdfDoc.setFont("helvetica", "normal");
+                  pdfDoc.setTextColor(100);
+                  pdfDoc.text(`${displayFileName} | Pages: ${images.length}`, margin, 15);
+               }
 
                // Add Logo small in corner
                if (logoBase64) {
@@ -251,12 +253,11 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
             pdfDoc.text("Letter Translation", margin, y);
             y += 12;
 
-            // Header Info
             if (editedResult.headerInfo) {
                pdfDoc.setFontSize(10);
                pdfDoc.setFont("helvetica", "normal");
                pdfDoc.text(`Child Name: ${editedResult.headerInfo.childName || 'N/A'}`, margin, y);
-               pdfDoc.text(`Child ID: ${editedResult.headerInfo.childId || 'N/A'}`, margin + 60, y);
+               pdfDoc.text(`Child ID: N/A`, margin + 60, y);
                pdfDoc.text(`Date: ${editedResult.headerInfo.date || 'N/A'}`, margin + 120, y);
                y += 10;
             }
@@ -287,6 +288,16 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                pdfDoc.text(line, margin, y);
                y += 7;
             });
+
+            // "Below translation" ID Reference
+            y += 10;
+            if (y > pageHeight - 20) {
+               pdfDoc.addPage();
+               y = 20;
+            }
+            pdfDoc.setFont("helvetica", "bold");
+            pdfDoc.setFontSize(10);
+            pdfDoc.text("Child ID: N/A", margin, y);
 
             // Footer
             y += 15;
