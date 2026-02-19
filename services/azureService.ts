@@ -1,22 +1,36 @@
 import { AzureOpenAI } from "openai";
 import { ChatMessage, TranslationResult } from "../types";
 
-const endpoint = import.meta.env.VITE_AZURE_OPENAI_ENDPOINT;
-const apiKey = import.meta.env.VITE_AZURE_OPENAI_API_KEY;
-const deployment = import.meta.env.VITE_AZURE_OPENAI_DEPLOYMENT;
-const apiVersion = "2024-08-01-preview"; // Use a recent version that supports GPT-4o
+// Lazy client initialization to prevent top-level crash if env vars are missing
+let client: AzureOpenAI | null = null;
 
-if (!endpoint || !apiKey || !deployment) {
-    console.error("Azure OpenAI credentials missing");
-}
+const getClient = () => {
+    if (client) return client;
 
-const client = new AzureOpenAI({
-    endpoint,
-    apiKey,
-    apiVersion,
-    deployment,
-    dangerouslyAllowBrowser: true // Required for client-side usage
-});
+    const endpoint = import.meta.env.VITE_AZURE_OPENAI_ENDPOINT;
+    const apiKey = import.meta.env.VITE_AZURE_OPENAI_API_KEY;
+    const deployment = import.meta.env.VITE_AZURE_OPENAI_DEPLOYMENT;
+    const apiVersion = "2024-08-01-preview";
+
+    if (!endpoint || !apiKey) {
+        console.warn("⚠️ Azure OpenAI credentials missing! Chat features will not work.");
+        return null;
+    }
+
+    try {
+        client = new AzureOpenAI({
+            endpoint,
+            apiKey,
+            apiVersion,
+            deployment: deployment || 'gpt-4o', // Fallback for constructor
+            dangerouslyAllowBrowser: true
+        });
+        return client;
+    } catch (e) {
+        console.error("Failed to initialize Azure OpenAI client:", e);
+        return null;
+    }
+};
 
 export const createChatSession = () => {
     let history: { role: "system" | "user" | "assistant"; content: string }[] = [
@@ -31,9 +45,13 @@ export const createChatSession = () => {
             try {
                 history.push({ role: "user", content: message });
 
-                const response = await client.chat.completions.create({
+                const azureClient = getClient();
+                if (!azureClient) throw new Error("Azure OpenAI client not initialized");
+
+                const deployment = import.meta.env.VITE_AZURE_OPENAI_DEPLOYMENT;
+                const response = await azureClient.chat.completions.create({
                     messages: history,
-                    model: deployment,
+                    model: deployment || 'gpt-4o',
                 });
 
                 const reply = response.choices[0].message.content || "I couldn't generate a response.";
@@ -149,9 +167,13 @@ export const translateImage = async (
             { role: "user", content: content }
         ];
 
-        const response = await client.chat.completions.create({
+        const azureClient = getClient();
+        if (!azureClient) throw new Error("Azure OpenAI client not initialized");
+
+        const deployment = import.meta.env.VITE_AZURE_OPENAI_DEPLOYMENT;
+        const response = await azureClient.chat.completions.create({
             messages: messages,
-            model: deployment,
+            model: deployment || 'gpt-4o',
             response_format: { type: "json_object" }
         });
 
