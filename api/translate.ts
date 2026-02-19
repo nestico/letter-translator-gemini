@@ -62,10 +62,12 @@ export default async function handler(req: any, res: any) {
             model: "gemini-2.0-flash",
             generationConfig: {
                 responseMimeType: "application/json",
-                temperature: 0.2, // Lower temperature for more stable/literal translation
+                temperature: 1.0, // Raised to 1.0 to prevent "lazy" stops on multi-page letters
                 topP: 0.8,
                 topK: 40,
-                // Removed stopSequences to prevent truncated JSON if the model is wordy
+                presencePenalty: 1.0,  // Mathematical repetition ban
+                frequencyPenalty: 1.5, // Strong word-level loop prevention
+                stopSequences: ["END_OF_TRANSLATION"], // Hard circuit breaker
                 responseSchema: {
                     type: SchemaType.OBJECT,
                     properties: {
@@ -107,7 +109,9 @@ export default async function handler(req: any, res: any) {
   2. **Single Translation**: Output exactly ONE continuous English translation.
   3. **ABSOLUTE REPETITION BAN**: Do NOT repeat paragraphs, sentences, or phrases. If you start to repeat the same information (e.g. "I am fine... I am fine..."), STOP and move to the next information or end the response.
   4. **No Redundancy**: If a "Dear Sponsor" greeting appears on Page 1, do not invent a second greeting for Page 2.
-  5. **Verification**: After translating, check: "Did I repeat any sentence? Is there non-English script?". Remove any repetitions before outputting JSON.
+  5. **BINARY STOP RULE**: STOP IMMEDIATELY after the letter's signature. Do not provide drafts, notes, or filler text.
+  6. **SYSTEM JUDGE**: Before finalizing the JSON, verify: "Did I output the translation exactly once? Did I repeat sentences? Is there non-English script?". Remove any repetitions.
+  7. **TERMINATION**: Append the hidden token "END_OF_TRANSLATION" at the very end of your translation field content.
 
   **SPECIFIC RULES**: ${rules.special_instructions}
   **NEGATIVE CONSTRAINTS**: ${[...generalRules.negative_constraints, ...rules.negative_constraints].join(", ")}.
