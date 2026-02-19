@@ -61,10 +61,10 @@ export default async function handler(req: any, res: any) {
             model: "gemini-2.0-flash",
             generationConfig: {
                 responseMimeType: "application/json",
-                temperature: 1.0,
-                presencePenalty: 1.0,
-                frequencyPenalty: 1.5,
-                stopSequences: ["END_OF_TRANSLATION"],
+                temperature: 0.2, // Lower temperature for more stable/literal translation
+                topP: 0.8,
+                topK: 40,
+                // Removed stopSequences to prevent truncated JSON if the model is wordy
                 responseSchema: {
                     type: SchemaType.OBJECT,
                     properties: {
@@ -94,43 +94,29 @@ export default async function handler(req: any, res: any) {
         const generalRules = LANGUAGE_SPECIFIC_RULES["General"];
 
         const prompt = `
-  You are a ${rules.role}.
+  You are an expert ${rules.role}.
 
-  **TASK**: 
-  1. You are analyzing a sequence of up to 3 images. You MUST scan every single image for text before starting the translation.
-  2. Transcribe the text exactly as written in its original language.
-  3. Translate the text into clear, modern ${targetLanguage}.
-  4. Identify the original language.
+  **CONTEXT**: This is a sponsorship letter from a child to their sponsor.
+  1. **The Header**: Usually contains "Child Name", "Child ID", and "Written by" (the Scribe).
+  2. **The Scribe**: If "Written by: Swapna" is listed, and the child is "Rapuri Srivalli", then Swapna is writing on behalf of Srivalli. Swapna might be an older sister, parent, or volunteer.
+  3. **The Voice**: The translation should be in the FIRST PERSON of the letter's speaker.
 
-  **PERSONA & TONE**:
-  - **First-Person Persona (MANDATORY)**: You ARE the child or the family member writing the letter. Use "I", "me", and "my" exactly as they appear in the handwriting.
-  - **PROHIBITED PHRASING**: NEVER use third-person phrases such as "The child says", "The boy mentions", "The writer is describing", "It is written that", or "She says".
-  - **Direct Voice**: Speak directly to the recipient (sponsor) as if you are the one holding the pen.
+  **INSTRUCTIONS**:
+  1. **Read ALL Images**: Analyze up to 3 images as ONE continuous letter.
+  2. **Single Translation**: Output exactly ONE continuous English translation. Do NOT repeat the translation or loop the content.
+  3. **No Redundancy**: If a "Dear Sponsor" greeting appears on Page 1, do not invent a second greeting for Page 2.
+  4. **Verification**: After translating, check: "Is there any non-English script in the translation? Is the text repeating?". Remove any script markers and repetitions.
 
-  **RULES & CONSTRAINTS (STRICT)**:
-  1. **Single Continuous Narrative**: You are analyzing ONE continuous multi-page letter. Read all images first. Synthesize the narrative into a single FIRST-PERSON translation. Do not restart the greeting logic for subsequent pages. If the letter spans multiple pages, combine them into one seamless English message.
-  2. **Verbatim Fidelity**: Keep cultural anchors (e.g., "Sankranti", "cousin brother", "God bless you") exactly as written. Do not explain them in parentheses.
-  3. **No Repetition**: Once a greeting or blessing is translated, DO NOT repeat it at the end unless it is literally written twice.
-  4. **Strictest Script Separation**:
-     - **transcription** field: Must contain ONLY the original script (e.g. Telugu, Amharic). Surround page breaks with [Page 1], [Page 2].
-     - **translation** field: Must contain ONLY ${targetLanguage}. **PROHIBITED**: Do NOT include any characters from the original script (Telugu/Amharic/etc.) inside the translation field. If you merge them, the system fails.
-  5. **Metadata Separation**:
-     - Extract the Child's Name, Child ID, and Date ONLY into the 'headerInfo' JSON object. Do NOT include these in the 'translation' text.
+  **SPECIFIC RULES**: ${rules.special_instructions}
+  **NEGATIVE CONSTRAINTS**: ${[...generalRules.negative_constraints, ...rules.negative_constraints].join(", ")}.
 
-  - **Specific Instructions**: ${rules.special_instructions}
-  - **NEGATIVE CONSTRAINTS**: ${[...generalRules.negative_constraints, ...rules.negative_constraints].join(", ")}.
-
-  **OUTPUT FORMAT (JSON)**:
+  **JSON STRUCTURE**:
   {
-    "headerInfo": {
-        "childId": "ID found on letter...",
-        "childName": "Name found on letter...",
-        "date": "Date found on letter..."
-    },
-    "transcription": "Verbatim transcription in original script...",
-    "translation": "English translation starting with Dear Sponsor...",
-    "detectedLanguage": "Language Name",
-    "confidenceScore": 0.0 to 1.0
+    "headerInfo": { "childId": "...", "childName": "...", "date": "..." },
+    "transcription": "...",
+    "translation": "English Only Text...",
+    "detectedLanguage": "...",
+    "confidenceScore": 0.9
   }
   `;
 

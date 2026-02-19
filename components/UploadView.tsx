@@ -213,12 +213,13 @@ export const UploadView: React.FC<UploadViewProps> = ({ onProcess, onCancel }) =
                         {selectedFiles.length > 0 && (
                             <div className="bg-white dark:bg-card-dark border border-slate-200 dark:border-border-dark rounded-xl p-4 shadow-sm">
                                 <div className="flex justify-between items-center mb-4">
-                                    <h3 className="font-bold text-slate-900 dark:text-white">Pages ({selectedFiles.length}/3)</h3>
+                                    <h3 className="font-bold text-slate-900 dark:text-white">Selected Documents ({selectedFiles.length})</h3>
                                 </div>
                                 <div className="flex flex-col gap-2">
                                     {selectedFiles.map((file, i) => (
                                         <div key={i} onClick={() => setSelectedIndex(i)} className={`flex items-center justify-between p-2 rounded cursor-pointer border ${i === selectedIndex ? 'bg-blue-50 border-primary' : 'bg-slate-50 border-transparent hover:bg-slate-100'}`}>
                                             <div className="flex items-center gap-2 truncate">
+                                                <span className="text-[10px] font-bold text-slate-400 w-4">{i + 1}.</span>
                                                 <div className="w-8 h-8 bg-slate-200 rounded overflow-hidden flex-shrink-0">
                                                     {file.type === 'application/pdf' ? <span className="material-symbols-outlined text-red-500 text-sm p-1">picture_as_pdf</span> : <img src={previewUrls[i]} className="w-full h-full object-cover" />}
                                                 </div>
