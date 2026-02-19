@@ -208,7 +208,7 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                   pdfDoc.setFontSize(10);
                   pdfDoc.setFont("helvetica", "normal");
                   pdfDoc.setTextColor(100);
-                  pdfDoc.text(`${displayFileName} | Pages: ${images.length}`, margin, 15);
+                  pdfDoc.text(`Child ID: ${displayFileName} | Pages: ${images.length}`, margin, 15);
                }
 
                // Add Logo small in corner
@@ -252,10 +252,11 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
             y += 12;
 
             if (editedResult.headerInfo) {
+               const idToDisplay = exportFileName.trim().replace(/\.[^/.]+$/, "") || 'N/A';
                pdfDoc.setFontSize(10);
                pdfDoc.setFont("helvetica", "normal");
                pdfDoc.text(`Child Name: ${editedResult.headerInfo.childName || 'N/A'}`, margin, y);
-               pdfDoc.text(`Child ID: N/A`, margin + 60, y);
+               pdfDoc.text(`Child ID: ${idToDisplay}`, margin + 60, y);
                pdfDoc.text(`Date: ${editedResult.headerInfo.date || 'N/A'}`, margin + 120, y);
                y += 10;
             }
@@ -295,7 +296,8 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
             }
             pdfDoc.setFont("helvetica", "bold");
             pdfDoc.setFontSize(10);
-            pdfDoc.text("Child ID: N/A", margin, y);
+            const idToDisplayBelow = exportFileName.trim().replace(/\.[^/.]+$/, "") || 'N/A';
+            pdfDoc.text(`Child ID: ${idToDisplayBelow}`, margin, y);
 
             // Footer
             y += 15;
