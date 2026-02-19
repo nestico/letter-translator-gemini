@@ -62,12 +62,12 @@ export default async function handler(req: any, res: any) {
             model: "gemini-2.0-flash",
             generationConfig: {
                 responseMimeType: "application/json",
-                temperature: 1.0, // Raised to 1.0 to prevent "lazy" stops on multi-page letters
+                temperature: 1.0,
                 topP: 0.8,
                 topK: 40,
-                presencePenalty: 1.0,  // Mathematical repetition ban
-                frequencyPenalty: 1.5, // Strong word-level loop prevention
-                stopSequences: ["END_OF_TRANSLATION"], // Hard circuit breaker
+                presencePenalty: 0.2,  // Softened from 1.0 to allow natural word recurrence
+                frequencyPenalty: 0.3, // Softened from 1.5 to prevent content truncation
+                stopSequences: ["END_OF_TRANSLATION"],
                 responseSchema: {
                     type: SchemaType.OBJECT,
                     properties: {
@@ -106,11 +106,11 @@ export default async function handler(req: any, res: any) {
 
   **INSTRUCTIONS**:
   1. **Read ALL Images**: Analyze up to 3 images as ONE continuous letter.
-  2. **Single Translation**: Output exactly ONE continuous English translation.
-  3. **ABSOLUTE REPETITION BAN**: Do NOT repeat paragraphs, sentences, or phrases. If you start to repeat the same information (e.g. "I am fine... I am fine..."), STOP and move to the next information or end the response.
-  4. **No Redundancy**: If a "Dear Sponsor" greeting appears on Page 1, do not invent a second greeting for Page 2.
-  5. **BINARY STOP RULE**: STOP IMMEDIATELY after the letter's signature. Do not provide drafts, notes, or filler text.
-  6. **SYSTEM JUDGE**: Before finalizing the JSON, verify: "Did I output the translation exactly once? Did I repeat sentences? Is there non-English script?". Remove any repetitions.
+  2. **COMPLETENESS MANDATE**: You MUST translate EVERY SINGLE handwritten detail found across ALL pages. Do not summarize, skip, or truncate. If the letter mentions crops, festivals, grades, or family members, include them all.
+  3. **ABSOLUTE REPETITION BAN**: Do NOT repeat the exact same paragraph or large blocks of text multiple times. If you detect a loop, break it and move to the next unique content.
+  4. **No Redundancy**: If a "Dear Sponsor" greeting appears once, do not invent it again for subsequent pages.
+  5. **FINAL SIGNATURE TERMINATION**: Only conclude the translation when you reach the final signature/closing of the ENTIRE document (usually on the last page). Do not stop if a name appears mid-letter.
+  6. **SYSTEM JUDGE**: Before finalizing the JSON, verify: "Did I include details from every image? Did I repeat paragraphs? Is the text non-English?".
   7. **TERMINATION**: Append the hidden token "END_OF_TRANSLATION" at the very end of your translation field content.
 
   **SPECIFIC RULES**: ${rules.special_instructions}
