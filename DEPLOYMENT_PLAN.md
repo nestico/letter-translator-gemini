@@ -166,6 +166,7 @@ To maintain stability during concurrent sessions:
 ### 6.3 SSL & Security
 *   **SSL/TLS**: Automated certificates via Let's Encrypt, managed by Vercel.
 *   **Data Residency**: Strict adherence to `ca-central-1` (Canada) for all database and file storage operations.
+*   **User Restriction**: Access is restricted via Supabase Auth. IT can manually manage the user whitelist in the Supabase Dashboard to ensure only authorized personnel can sign in.
 
 ---
 

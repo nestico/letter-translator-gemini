@@ -1,0 +1,7 @@
+# Exclude local reference data from Vercel deployments
+reference_data/
+node_modules/
+.env
+.env.local
+.git
+.gitignore

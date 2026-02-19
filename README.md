@@ -21,6 +21,7 @@
   - **Text Export**: Simple `.txt` download for raw content.
   - Uses native **File System Access API** for reliable file saving.
 - **User Accounts**: Supabase integration for secure user authentication and activity logging.
+- **Privacy & Training**: Support for local-only **Golden Reference Datasets** to improve translation accuracy for complex scripts (Tamil, Telugu, Amharic) without cloud exposure.
 
 ## Tech Stack
 - **Frontend**: React, TypeScript, Vite, TailwindCSS
