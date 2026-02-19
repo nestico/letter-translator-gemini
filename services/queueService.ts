@@ -23,7 +23,7 @@ translationQueue.on('next', () => {
  * Provides a way to check queue size.
  */
 export const queueRequest = <T>(task: () => Promise<T>): { result: Promise<T>, position: number } => {
-    const position = translationQueue.size + 1; // 1-based index (current + waitees)
+    const position = translationQueue.size + translationQueue.pending + 1; // 1-based index (current + waitees)
     const result = translationQueue.add(task) as Promise<T>; // Type assertion to fix 'void' inference if queue is paused
     return { result, position };
 };

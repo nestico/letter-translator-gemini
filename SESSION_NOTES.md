@@ -222,4 +222,27 @@
     - **Typography**: Text automatically shifted to `slate-900` (Black) and `slate-500` (Dark Gray), appearing crisp against the white background.
     - **Accents**: Retained `primary` color (`#522d6d` Purple) for buttons, icons, and highlights to maintain brand consistency.
 
+# Session Notes - Feb 19, 2026
+
+### 20. Remediation of Critical Blockers (Production Readiness)
+- **Objective**: Address the 100% of "Critical Vulnerabilities" and "Security Blockers" identified in the Feb 9th Project Assessment.
+- **Changes**:
+    - **CV-1: Human-in-the-Loop Validation**: 
+        - Removed automatic database saving.
+        - Implemented **'Approve & Save'** manual triggering in `TranslationView.tsx`.
+        - Added low-confidence warnings when `confidenceScore < 0.7`.
+    - **CV-3: Vercel Configuration**: 
+        - Created `vercel.json` to extend serverless function timeout to **60s**, ensuring multi-page letters don't timeout.
+    - **Security: API Key Protection (Gemini)**: 
+        - Created `api/translate.ts` serverless function to handle all Gemini interactions.
+        - Removed `VITE_GEMINI_API_KEY` from client-side code, eliminating the risk of key theft from the browser.
+        - Updated `geminiService.ts` to call the new proxy endpoint.
+    - **Security: Row-Level Security (RLS)**: 
+        - Created `supabase/migrations/20260219_enable_rls.sql` with strict policies for the `translations` table.
+    - **Optimization: Image Compression**:
+        - Created `services/imageUtils.ts` with local Canvas-based compression.
+        - Integrated compression into `TranslationView.tsx`.
+        - Reduces multi-megabyte photos to **~500KB**, ensuring faster uploads and avoiding 20MB payload limits.
+- **Outcome**: The application is significantly more secure, robust, and optimized for low-bandwidth environments.
+
 

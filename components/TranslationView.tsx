@@ -5,6 +5,8 @@ import { logActivity } from '../services/activity';
 import { saveTranslation } from '../services/translationService';
 import { jsPDF } from 'jspdf';
 
+import { compressImage } from '../services/imageUtils';
+
 interface TranslationViewProps {
    user: User | null;
    images: { url: string; file: File }[]; // Changed prop
@@ -28,6 +30,8 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
    const [activeTab, setActiveTab] = useState<'transcription' | 'translation'>('translation');
    const [currentImageIndex, setCurrentImageIndex] = useState(0);
    const [translatorName, setTranslatorName] = useState(user?.name || 'Children Believe AI');
+   const [isSaving, setIsSaving] = useState(false);
+   const [hasSaved, setHasSaved] = useState(false);
 
    useEffect(() => {
       if (user?.name) {
@@ -51,41 +55,38 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
       console.log("Starting processing...");
       setIsProcessing(true);
       try {
-         // Read all files to base64
+         // Read all files to base64 with Compression
          const imagesContent = await Promise.all(images.map(async (img) => {
+            // Compress locally before converting to base64
+            const compressedFile = await compressImage(img.file);
+            console.log(`[Compression] ${img.file.name}: ${(img.file.size / 1024).toFixed(1)}KB -> ${(compressedFile.size / 1024).toFixed(1)}KB`);
+
             return new Promise<{ base64: string, mimeType: string }>((resolve, reject) => {
                const reader = new FileReader();
                reader.onload = () => {
                   const result = reader.result as string;
                   const base64 = result.split(',')[1];
-                  resolve({ base64, mimeType: img.file.type });
+                  resolve({ base64, mimeType: compressedFile.type });
                };
                reader.onerror = reject;
-               reader.readAsDataURL(img.file);
+               reader.readAsDataURL(compressedFile);
             });
          }));
 
          const data = await translateImage(imagesContent, selectedLanguage, targetLanguage);
          setResult(data);
          setEditedResult(data);
+         setHasSaved(false); // Reset saved state for new result
+
+         if (data.confidenceScore < 0.7) {
+            setError("Warning: Low confidence translation. Some parts of the handwriting may be illegible or misinterpreted. Please review carefully before saving.");
+         }
 
          if (user) {
             logActivity(user.id, 'TRANSLATE_LETTER', {
                language: data.detectedLanguage,
                confidence: data.confidenceScore,
                pages: images.length
-            });
-
-            // Save to history (using first file name as reference)
-            saveTranslation(
-               user.id,
-               images[0].file.name, // Use first file
-               data.transcription,
-               data.translation,
-               data.detectedLanguage || selectedLanguage,
-               targetLanguage
-            ).then(saved => {
-               if (saved) console.log("Translation saved to history");
             });
          }
 
@@ -99,6 +100,33 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
          }
       } finally {
          setIsProcessing(false);
+      }
+   };
+
+   const handleSaveToHistory = async () => {
+      if (!user || !editedResult || hasSaved || isSaving) return;
+
+      setIsSaving(true);
+      try {
+         const saved = await saveTranslation(
+            user.id,
+            images[0].file.name,
+            editedResult.transcription,
+            editedResult.translation,
+            editedResult.detectedLanguage || selectedLanguage,
+            targetLanguage
+         );
+
+         if (saved) {
+            setHasSaved(true);
+            // Optional: reset error if it was just a warning
+            if (error?.includes("Low confidence")) setError(null);
+         }
+      } catch (err) {
+         console.error("Failed to save:", err);
+         alert("Could not save to history. Please try again.");
+      } finally {
+         setIsSaving(false);
       }
    };
 
@@ -338,13 +366,31 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                   Change Images
                </button>
                {result && (
-                  <button
-                     onClick={handleExportClick}
-                     className="flex items-center justify-center h-10 px-4 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-bold"
-                  >
-                     <span className="material-symbols-outlined mr-2 text-[20px]">download</span>
-                     Export PDF
-                  </button>
+                  <div className="flex gap-2">
+                     {!hasSaved && user && (
+                        <button
+                           onClick={handleSaveToHistory}
+                           disabled={isSaving}
+                           className={`flex items-center justify-center h-10 px-4 rounded-lg transition-colors text-sm font-bold shadow-sm ${isSaving ? 'bg-slate-100 text-slate-400' : 'bg-green-600 text-white hover:bg-green-700'}`}
+                        >
+                           <span className="material-symbols-outlined mr-2 text-[20px]">{isSaving ? 'sync' : 'save'}</span>
+                           {isSaving ? 'Saving...' : 'Approve & Save'}
+                        </button>
+                     )}
+                     {hasSaved && (
+                        <div className="flex items-center px-4 h-10 text-green-600 font-bold text-sm bg-green-50 rounded-lg border border-green-100">
+                           <span className="material-symbols-outlined mr-2 text-[20px]">check_circle</span>
+                           Saved to History
+                        </div>
+                     )}
+                     <button
+                        onClick={handleExportClick}
+                        className="flex items-center justify-center h-10 px-4 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-bold"
+                     >
+                        <span className="material-symbols-outlined mr-2 text-[20px]">download</span>
+                        Export PDF
+                     </button>
+                  </div>
                )}
             </div>
          </div>
