@@ -45,15 +45,14 @@ export const Hero: React.FC<HeroProps> = ({ onStartTranslation }) => {
           <div
             className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-card-dark"
             style={{
-              backgroundImage: "url('https://images.unsplash.com/photo-1516414447565-b14be071340a?auto=format&fit=crop&q=80&w=1000')",
+              backgroundImage: "url('https://images.unsplash.com/photo-1543167123-26154564858b?auto=format&fit=crop&q=80&w=1000')",
               backgroundSize: 'cover',
               backgroundPosition: 'center'
             }}
           >
-            {/* Simple clear overlay if needed, but keeping it clean for 'static' request */}
-            <div className="absolute inset-0 bg-black/5 flex items-end p-6">
-              <div className="bg-white/90 dark:bg-black/60 backdrop-blur-md px-4 py-2 rounded-lg border border-white/20 shadow-xl">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-primary dark:text-blue-400">Sample Document</span>
+            <div className="absolute inset-0 bg-transparent flex items-end p-6">
+              <div className="bg-white/95 dark:bg-black/60 backdrop-blur-md px-4 py-2 rounded-lg border border-white/20 shadow-xl">
+                <span className="text-[10px] font-black uppercase tracking-widest text-primary">Reference Sample</span>
               </div>
             </div>
           </div>

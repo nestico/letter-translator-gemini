@@ -2,19 +2,20 @@ import React from 'react';
 
 export const Footer: React.FC = () => {
   return (
-    <footer className="w-full border-t border-slate-200 dark:border-border-dark bg-white dark:bg-background-dark py-10">
-      <div className="max-w-[1280px] mx-auto px-4 lg:px-10 flex flex-col gap-8 items-center text-center">
-        <div className="flex items-center gap-2 text-slate-900 dark:text-white opacity-80">
-          <span className="material-symbols-outlined text-2xl">edit_note</span>
-          <span className="text-base font-bold">Letter Translator</span>
+    <footer className="w-full bg-primary text-white py-14">
+      <div className="max-w-[1280px] mx-auto px-4 lg:px-10 flex flex-col gap-10 items-center text-center">
+        <div className="flex flex-col items-center gap-2">
+          <h2 className="text-2xl font-black tracking-[0.2em] uppercase">Children Believe</h2>
+          <span className="text-xs font-bold uppercase tracking-widest opacity-80">Letter Translator</span>
         </div>
-        <div className="flex flex-wrap justify-center gap-x-8 gap-y-4">
-          <a href="#" className="text-slate-500 dark:text-slate-400 text-sm font-medium hover:text-primary dark:hover:text-primary transition-colors">Privacy Policy</a>
-          <a href="#" className="text-slate-500 dark:text-slate-400 text-sm font-medium hover:text-primary dark:hover:text-primary transition-colors">Terms of Service</a>
-          <a href="#" className="text-slate-500 dark:text-slate-400 text-sm font-medium hover:text-primary dark:hover:text-primary transition-colors">Help Center</a>
+        <div className="flex flex-wrap justify-center gap-x-12 gap-y-4">
+          <a href="#" className="text-sm font-bold text-white/80 hover:text-white transition-colors uppercase tracking-wider">Privacy</a>
+          <a href="#" className="text-sm font-bold text-white/80 hover:text-white transition-colors uppercase tracking-wider">Terms</a>
+          <a href="#" className="text-sm font-bold text-white/80 hover:text-white transition-colors uppercase tracking-wider">Support</a>
         </div>
-        <div className="text-slate-400 dark:text-slate-600 text-sm">
-          © 2024 Letter Translator. Powered by Google Gemini.
+        <div className="h-px w-20 bg-white/20"></div>
+        <div className="text-white/60 text-[11px] font-bold uppercase tracking-[0.3em]">
+          © 2026 CHILDREN BELIEVE · POWERED BY GEMINI 2.0
         </div>
       </div>
     </footer>
