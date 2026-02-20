@@ -44,7 +44,8 @@ function App() {
         // Log login activity (optional debouncing could be good but keeping simple)
         if (_event === 'SIGNED_IN') {
           await logActivity(session.user.id, 'LOGIN', { method: 'email' });
-          // Auto-redirect to app if on landing
+          // Auto-close modal and redirect to app if on landing
+          setAuthModalOpen(false);
           setAppState(prev => prev === AppState.LANDING ? AppState.APP : prev);
         }
       } else {

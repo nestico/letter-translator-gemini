@@ -28,11 +28,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
         password,
       });
       if (error) throw error;
-      onClose();
+
+      // Note: App.tsx's onAuthStateChange handles closing the modal and setting the user.
+      // We don't call onClose() here to avoid race conditions with the unmounting component.
     } catch (error: any) {
       console.error('Auth error:', error);
       setError(error.message || 'Authentication failed. Please check your credentials.');
-    } finally {
       setIsLoading(false);
     }
   };

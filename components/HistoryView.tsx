@@ -17,10 +17,16 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ user, onBack }) => {
     }, [user.id]);
 
     const loadHistory = async () => {
-        setLoading(true);
-        const data = await getTranslations(user.id);
-        setHistory(data);
-        setLoading(false);
+        try {
+            setLoading(true);
+            const data = await getTranslations(user.id);
+            setHistory(data || []);
+        } catch (err) {
+            console.error("Critical error loading history:", err);
+            setHistory([]);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleToggleGolden = async (id: string, currentVal: boolean) => {
