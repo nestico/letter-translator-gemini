@@ -27,6 +27,7 @@ function App() {
           email: session.user.email!,
           name: session.user.user_metadata.full_name || session.user.email!.split('@')[0],
         });
+        setAuthModalOpen(false); // Close modal if already logged in
       }
     });
 
