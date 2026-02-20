@@ -40,4 +40,6 @@ export interface TranslationRecord {
   source_language: string;
   target_language: string;
   created_at: string;
+  is_golden?: boolean;
+  image_urls?: string[]; // To reference the images used for this translation
 }

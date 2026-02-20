@@ -96,6 +96,28 @@ export default async function handler(req: any, res: any) {
         const rules = LANGUAGE_SPECIFIC_RULES[languageKey] || LANGUAGE_SPECIFIC_RULES["General"];
         const generalRules = LANGUAGE_SPECIFIC_RULES["General"];
 
+        // Fetch Golden References for Dynamic Learning
+        let goldenReferencePrompt = "";
+        try {
+            const { supabaseServer } = await import("../services/supabaseServer");
+            const { data: goldenRefs } = await supabaseServer
+                .from('translations')
+                .select('transcription, translation')
+                .eq('is_golden', true)
+                .eq('source_language', sourceLanguage)
+                .order('created_at', { ascending: false })
+                .limit(2);
+
+            if (goldenRefs && goldenRefs.length > 0) {
+                goldenReferencePrompt = "\n\n**GOLDEN REFERENCE EXAMPLES (FOLLOW THIS STYLE)**:\n";
+                goldenRefs.forEach((ref: any, idx: number) => {
+                    goldenReferencePrompt += `Example ${idx + 1}:\n- NATIVE: ${ref.transcription}\n- CORRECT ENGLISH: ${ref.translation}\n\n`;
+                });
+            }
+        } catch (e) {
+            console.error("Failed to load golden references:", e);
+        }
+
         const prompt = `
   You are an expert ${rules.role}.
 
@@ -112,6 +134,8 @@ export default async function handler(req: any, res: any) {
   5. **FINAL SIGNATURE TERMINATION**: Only conclude the translation when you reach the final signature/closing of the ENTIRE document (usually on the last page). Do not stop if a name appears mid-letter.
   6. **SYSTEM JUDGE**: Before finalizing the JSON, verify: "Did I include details from every image? Did I repeat paragraphs? Is the text non-English?".
   7. **TERMINATION**: Append the hidden token "END_OF_TRANSLATION" at the very end of your translation field content.
+
+  ${goldenReferencePrompt}
 
   **SPECIFIC RULES**: ${rules.special_instructions}
   **NEGATIVE CONSTRAINTS**: ${[...generalRules.negative_constraints, ...rules.negative_constraints].join(", ")}.

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { User, TranslationRecord } from '../types';
-import { getTranslations } from '../services/translationService';
+import { getTranslations, toggleGoldenStatus } from '../services/translationService';
 
 interface HistoryViewProps {
     user: User;
@@ -21,6 +21,18 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ user, onBack }) => {
         const data = await getTranslations(user.id);
         setHistory(data);
         setLoading(false);
+    };
+
+    const handleToggleGolden = async (id: string, currentVal: boolean) => {
+        const success = await toggleGoldenStatus(id, !currentVal);
+        if (success) {
+            setHistory(prev => prev.map(item =>
+                item.id === id ? { ...item, is_golden: !currentVal } : item
+            ));
+            if (selectedRecord?.id === id) {
+                setSelectedRecord(prev => prev ? { ...prev, is_golden: !currentVal } : null);
+            }
+        }
     };
 
     const formatDate = (dateString: string) => {
@@ -62,6 +74,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ user, onBack }) => {
                     <table className="w-full text-left">
                         <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
                             <tr>
+                                <th className="px-6 py-4 text-sm font-bold text-slate-700 dark:text-slate-300 w-12"></th>
                                 <th className="px-6 py-4 text-sm font-bold text-slate-700 dark:text-slate-300">File Name</th>
                                 <th className="px-6 py-4 text-sm font-bold text-slate-700 dark:text-slate-300">Languages</th>
                                 <th className="px-6 py-4 text-sm font-bold text-slate-700 dark:text-slate-300">Date</th>
@@ -71,6 +84,17 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ user, onBack }) => {
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {history.map((item) => (
                                 <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                                    <td className="px-6 py-4">
+                                        <button
+                                            onClick={() => handleToggleGolden(item.id, item.is_golden || false)}
+                                            className={`transition-all duration-200 ${item.is_golden ? 'text-yellow-500 scale-110' : 'text-slate-200 dark:text-slate-700 hover:text-slate-400'}`}
+                                            title={item.is_golden ? "Unmark as Golden" : "Mark as Golden Reference"}
+                                        >
+                                            <span className="material-symbols-outlined fill-current">
+                                                {item.is_golden ? 'star' : 'star_border'}
+                                            </span>
+                                        </button>
+                                    </td>
                                     <td className="px-6 py-4">
                                         <div className="font-medium text-slate-900 dark:text-white">{item.file_name}</div>
                                     </td>
@@ -102,9 +126,24 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ user, onBack }) => {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
                     <div className="bg-white dark:bg-card-dark w-full max-w-4xl h-[80vh] rounded-2xl overflow-hidden flex flex-col shadow-2xl">
                         <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
-                            <div>
-                                <h3 className="text-xl font-bold text-slate-900 dark:text-white">{selectedRecord.file_name}</h3>
-                                <span className="text-sm text-slate-500">{formatDate(selectedRecord.created_at)}</span>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => handleToggleGolden(selectedRecord.id, selectedRecord.is_golden || false)}
+                                    className={`transition-all duration-200 ${selectedRecord.is_golden ? 'text-yellow-500 scale-110' : 'text-slate-300 dark:text-slate-600 hover:text-slate-500'}`}
+                                >
+                                    <span className="material-symbols-outlined fill-current text-2xl">
+                                        {selectedRecord.is_golden ? 'star' : 'star_border'}
+                                    </span>
+                                </button>
+                                <div>
+                                    <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                        {selectedRecord.file_name}
+                                        {selectedRecord.is_golden && (
+                                            <span className="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full uppercase font-bold tracking-wider">Golden Reference</span>
+                                        )}
+                                    </h3>
+                                    <span className="text-sm text-slate-500">{formatDate(selectedRecord.created_at)}</span>
+                                </div>
                             </div>
                             <button
                                 onClick={() => setSelectedRecord(null)}
