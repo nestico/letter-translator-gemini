@@ -23,19 +23,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
     setIsLoading(true);
 
     try {
+      // Hard guard: reset loading and allow close after 2 seconds no matter what
+      const safetyId = setTimeout(() => {
+        setIsLoading(false);
+        // We don't force onClose here yet to give it a chance
+      }, 2000);
+
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
+
+      clearTimeout(safetyId);
       if (error) throw error;
 
-      // Note: App.tsx's onAuthStateChange handles closing the modal and setting the user.
-      // We don't call onClose() here to avoid race conditions with the unmounting component.
-      // Secondary safety - wait a moment for the global event and then force close
-      setTimeout(() => {
-        setIsLoading(false);
-        onClose();
-      }, 1500);
+      // Success: wait a small moment for the global state to catch up then close
+      setTimeout(onClose, 500);
 
     } catch (error: any) {
       console.error('Auth error:', error);
