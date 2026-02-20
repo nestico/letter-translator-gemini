@@ -287,32 +287,27 @@
 # Session Notes - Feb 20, 2026 (Part 2)
 
 ### 23. Corporate Branding Overhaul ("Children Believe")
-- **Objective**: Match the organizational branding standards and provide a premium, integrated experience.
-- **Changes**:
-    - **Color System**: Updated primary brand hex to `#9b4db1` (Children Believe Purple) across all CSS and Tailwind tokens.
-    - **Navbar Redesign**:
-        - Switched from transparent/white to a **Solid Purple Background**.
-        - Restored the standard **Logo-Left / User-Right** layout for better ergonomics and familiarity.
-        - Simplified labels to "CHILDREN BELIEVE | Letter Translator" in stylized typography.
-    - **Footer Redesign**:
-        - Created a matching branded footer with white centered text and corporate links.
-    - **Hero Asset Stability**:
-        - Removed the dynamic `picsum.photos` placeholder which was causing intermittent loading failures.
-        - Implemented a **Local Static Asset** (`/public/images/hero-letter.jpg`) featuring a high-quality historical letter and a digital interface.
+- **Color System**: Updated primary brand hex to `#9b4db1` (Children Believe Purple).
+- **Navbar & Footer**: Implemented solid Brand Purple backgrounds with centered corporate branding and a standardized Logo-Left / Action-Right layout.
+- **Hero Asset**: Switched to a **Local Static Asset** (`/public/images/hero-letter.jpg`) to ensure 100% reliable image loading for all users.
 
-### 24. Reliability & Stability resets (The "Nuclear" Hardening)
-- **Problem**: Users were experiencing "stuck" loading states in the Auth modal and History view, and session data was persisting even after logout.
-- **Solution**:
-    - **Nuclear Sign-Out**: Added `localStorage.clear()` and `sessionStorage.clear()` to the sign-out trigger. This ensures all cached tokens from Supabase are destroyed, preventing the "auto-login" loop.
-    - **History Guard**: Wrapped the `loadHistory` function in a `try/catch/finally` block. This ensures that the loading spinner is **always** dismissed, even if the network or database request fails.
-    - **Auth Modal Fallsback**: Added a 1.5-second fallback close timer in the login modal. If the global event listener fails to catch the login event, the modal will now gracefully close itself.
-    - **Versioning**: Integrated `v1.0.5` tag in the Navbar. This allows the team to confirm that Vercel has indeed served the latest code, bypassing aggressive browser caching.
+### 24. Reliability & Stability Hardening
+- **"Nuclear" Sign-Out**: Implemented `localStorage.clear()` and `sessionStorage.clear()` to prevent persistent sessions and "auto-login" bugs.
+- **Loading Guards**: 
+    - Added a **2-second Safety Timeout** to the AuthModal to prevent the login button from staying stuck on "Signing In..." if the database hangs.
+    - Added a **10-second Circuit Breaker** to HistoryView, which displays a "Refresh History" button instead of an infinite spinner.
+- **Activity Correction**: Fixed a database mapping error where `metadata` was being used instead of `details`, resolving insertion failures in the `activity` table.
 
-### 25. Audit & Activity Logging
-- **Objective**: Track application usage and provide security auditing for login/logout events.
-- **Changes**:
-    - **Database**: Created a dedicated `activity` table in Supabase.
-    - **RLS Policies**: Implemented Row-Level Security so users can only insert or view their own activity logs.
-    - **Automatic Triggers**: Integrated `logActivity` calls into the login, logout, and translation-saved events.
+### 25. Build & Type Resolution
+- **Consolidated Service**: Created `services/activityService.ts` and removed the redundant `activity.ts`.
+- **Import Fixes**: Resolved critical build failures in `TranslationView.tsx` by correcting the activity service path.
+- **Type Safety**: Aligned the `ActivityType` union to include `TRANSLATE_LETTER`.
+
+## Current State & Next Steps (Monday)
+- **Status**: The application is **Working Fine** and stable in Production. Branding is finalized, and history loading is resilient.
+- **Next Steps (Next Monday)**:
+    - **PDF Multi-Font Support**: Integrate Noto Sans to support original script (Telugu/Amharic) in PDF exports.
+    - **Universal History Search**: Add filtering by Child ID and Date.
+    - **Admin Analytics**: Build a summary view for the `activity` logs.
 
 

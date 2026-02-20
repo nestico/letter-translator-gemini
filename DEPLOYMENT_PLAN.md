@@ -212,23 +212,21 @@ Use these prompts in Google NotebookLM (or ChatGPT/Gemini) to generate a profess
 
 ### **A. Branding & UI Overhaul (Feb 20, 2026)**
 1.  **Corporate Identity**: Full visual conversion to "Children Believe" standard.
-    *   **Navbar**: Standardized layout with logo on the Left and Actions on the Right. Implemented solid brand primary background (`#9b4db1`).
-    *   **Footer**: Redesigned to match the Navbar for a cohesive branded "sandwich" experience.
-    *   **Hero Image**: Switched from dynamic placeholders to a high-quality static asset (`hero-letter.jpg`) hosted locally for 100% reliability and professional first impression.
+    *   **Navbar**: Redesigned as solid Brand Purple (`#9b4db1`). Unified Logo-Left / Action-Right layout.
+    *   **Footer**: Redesigned to match the Navbar for a cohesive branded experience.
+    *   **Hero Image**: Implemented a **Local Static Asset** (`/images/hero-letter.jpg`) for 100% reliability.
 2.  **Versioning Transparency**:
-    *   **Implementation**: Added a persistent version tag (`v1.0.5`) in the UI. 
-    *   **Purpose**: Allows users and IT support to verify they are seeing the latest deployed code on Vercel, bypassing browser cache issues.
+    *   **Implementation**: Added persistent version tag (`v1.0.5`) in the UI to facilitate IT support and cache clearing.
 
 ### **B. Reliability & Stability Hardening (Feb 20, 2026)**
 1.  **"Nuclear" Sign-Out Resiliency**: 
     *   **Mechanism**: Sign-out now explicitly calls `localStorage.clear()` and `sessionStorage.clear()`.
-    *   **Benefit**: Eliminates "zombie" sessions where users appeared logged in after a refresh due to cached Supabase tokens.
 2.  **History & Modal Synchronization**:
     *   **Loading States**: Wrapped all history fetches in `try-catch-finally` to ensure loading spinners never get stuck.
-    *   **Auth Modal**: Added a 1.5s fallback close timer to handle scenarios where the global auth listener fails to trigger, ensuring successful logins never leave the user staring at a loading modal.
+    *   **Auth Modal**: Added a 2-second **Safety Timeout** to the login button. If the database hangs, the modal resets automatically.
 3.  **Activity Tracking**:
-    *   **Implementation**: Launched the `activity` table in the database.
-    *   **Data Captured**: Logs `LOGIN`, `LOGOUT`, and `TRANSLATE` actions for audit trails and usage analytics.
+    *   **Implementation**: Launched the `activity` table.
+    *   **Corrected Schema**: Fixed the mapping of `details` vs `metadata` in the database connector.
 
 ### **C. Queue & Multi-Page Fidelity (Update Jan 20 PM)**
 1.  **Request Queuing (Rate Protection)**:
@@ -258,5 +256,25 @@ The system is now self-improving through a feedback loop between the human trans
 
 ### **B. Maintenance Procedures**
 *   **New Migration**: `20260220_add_is_golden.sql` must be applied to the production database to enable columns for `is_golden` and `image_urls`.
-*   **API Security**: Uses `services/supabaseServer.ts` on the backend to securely interact with the database using restricted server-side environment variables.
+
+---
+
+## 10. Future Enhancements & Technical Debt (Planned for Next Session: Monday)
+
+### **A. Immediate Priorities**
+1.  **Advanced PDF Multi-Font Support**:
+    *   **Limitation**: Current PDF export strips non-ASCII characters (Telugu, Amharic) for stability.
+    *   **Goal**: Integrate custom `.ttf` fonts (`Noto Sans`) into `jsPDF` builds to allow original script exports in PDF.
+2.  **Universal Search & Filtering**:
+    *   **Goal**: Add a search bar to the **History View** to allow users to quickly find letters by Child ID, Date, or Translator name.
+3.  **Admin Usage Dashboard**:
+    *   **Goal**: Create a restricted view for managers to see global statistics (Total Letters Translated, Most Active Regions) via the `activity` table.
+
+### **B. Long-term Hardening**
+1.  **PWA (Offline Support)**:
+    *   **Goal**: Enable Service Workers for "Offline Photo Capture" so field workers can take photos without internet and sync them when they reach a hub.
+2.  **Auto-OCR Routing**:
+    *   **Goal**: Further optimize token costs by using standard OCR for documents that are 100% typed/typed-form, reserving the multi-modal Gemini Vision purely for handwritten content.
+3.  **Encrypted Metadata**:
+    *   **Goal**: Ensure Child names in the database are stored with a secondary layer of encryption (beyond standard Supabase RLS).
 
