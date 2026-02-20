@@ -45,9 +45,10 @@ function App() {
         // Log login activity (optional debouncing could be good but keeping simple)
         if (_event === 'SIGNED_IN') {
           await logActivity(session.user.id, 'LOGIN', { method: 'email' });
-          // Auto-close modal and redirect to app if on landing
+          // Auto-close modal and stay on home page
           setAuthModalOpen(false);
-          setAppState(prev => prev === AppState.LANDING ? AppState.APP : prev);
+          // Note: Removing the setAppState(AppState.APP) to keep user on Home Page
+          setAppState(prev => prev);
         }
       } else {
         setUser(null);
