@@ -81,12 +81,26 @@ function App() {
 
 
   const handleSignOut = async () => {
-    if (user) {
-      await logActivity(user.id, 'LOGOUT');
+    try {
+      console.log("Signing out user...");
+      if (user) {
+        // Fire and forget logout logging
+        logActivity(user.id, 'LOGOUT').catch(e => console.error("Logout log fail:", e));
+      }
+
+      // Clear state immediately for UI responsiveness
+      setUser(null);
+      setAppState(AppState.LANDING);
+
+      // Perform Supabase sign out
+      await supabase.auth.signOut();
+      console.log("Signed out successfully from Supabase");
+    } catch (err) {
+      console.error("Sign out error:", err);
+      // Ensure state is cleared even on error
+      setUser(null);
+      setAppState(AppState.LANDING);
     }
-    await supabase.auth.signOut();
-    setUser(null);
-    setAppState(AppState.LANDING);
   };
 
 
