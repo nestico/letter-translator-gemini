@@ -12,7 +12,6 @@ interface AuthModalProps {
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isRegistering, setIsRegistering] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,36 +23,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
     setIsLoading(true);
 
     try {
-      if (isRegistering) {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: email.split('@')[0], // Default name from email
-            },
-          },
-        });
-
-        if (error) throw error;
-        // Check if session is created immediately (not email confirmation required)
-        if (data.session) {
-          // onLogin will be handled by auth state change in App.tsx, but we can close modal
-          onClose();
-        } else if (data.user) {
-          // Show explicit success message in UI instead of alert
-          setError(null); // Clear any previous errors
-          alert('Registration successful! Please check your email for the confirmation link.'); // Keep alert for now for simple confirmation, or upgrade to UI message
-          onClose();
-        }
-      } else {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (error) throw error;
-        onClose();
-      }
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) throw error;
+      onClose();
     } catch (error: any) {
       console.error('Auth error:', error);
       setError(error.message || 'Authentication failed. Please check your credentials.');
@@ -77,12 +52,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
         <div className="flex flex-col gap-6">
           <div className="text-center">
             <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
-              {isRegistering ? 'Create Account' : 'Welcome Back'}
+              Welcome Back
             </h3>
             <p className="text-slate-500 dark:text-slate-400 mt-2">
-              {isRegistering
-                ? 'Register to start deciphering history.'
-                : 'Sign in to access your translations.'}
+              Sign in to access your translations.
             </p>
           </div>
 
@@ -126,22 +99,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
               {isLoading && (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               )}
-              {isLoading
-                ? (isRegistering ? 'Creating Account...' : 'Signing In...')
-                : (isRegistering ? 'Sign Up' : 'Sign In')}
+              {isLoading ? 'Signing In...' : 'Sign In'}
             </button>
           </form>
 
           <div className="text-center text-sm">
             <span className="text-slate-500 dark:text-slate-400">
-              {isRegistering ? 'Already have an account?' : "Don't have an account?"}
+              Corporate Access Only
             </span>
-            <button
-              onClick={() => setIsRegistering(!isRegistering)}
-              className="ml-2 text-primary font-bold hover:underline"
-            >
-              {isRegistering ? 'Sign In' : 'Register'}
-            </button>
           </div>
         </div>
       </div>
