@@ -142,6 +142,9 @@
 - **Changes**:
     - **New Service**: Created services/geminiService.ts to handle interactions with the Google Gemini API.
     - **Replaced Service**: Deprecated and replaced services/azureService.ts functionality within the application flow.
+    - **Private Reference Pipeline**:
+        - Established `/reference_data` local-only folder.
+        - Configured `.gitignore` and `.vercelignore` to protect sensitive ground-truth training data from repository exposure.
     - **Dependencies**: Added @google/generative-ai package.
     - **Configuration**:
         - Removed Azure-specific keys integration from the active service.
@@ -244,5 +247,39 @@
         - Integrated compression into `TranslationView.tsx`.
         - Reduces multi-megabyte photos to **~500KB**, ensuring faster uploads and avoiding 20MB payload limits.
 - **Outcome**: The application is significantly more secure, robust, and optimized for low-bandwidth environments.
+
+# Session Notes - Feb 19, 2026 (Part 2)
+
+### 21. AI Stability & Language Customization
+- **Objective**: Finalize language priority list, eliminate recurring AI loops, and match PDF exports to exact organizational naming standards.
+- **Changes**:
+    - **Language Priority**: Updated `LANGUAGES` dropdown to prioritize and label specifically: `(nic) spanish`, `(BFA) French`, `(CAN) English`, `(Ind) Telugu`, `(ind) Tamil`, `(ETH) Amharic`, `(ETH) Afan Oromo`.
+    - **Loop Prevention (The "Golden Balance")**:
+        - Re-implemented higher frequency (0.3) and presence penalties (0.2).
+        - Added **'Completeness Mandate'** to prompt: Explicitly forbids summarization and requires 100% detail extraction.
+        - **Binary Stop Rule**: AI now strictly terminates after the final signature using `stopSequences: ["END_OF_TRANSLATION"]`.
+    - **PDF Export Polish**:
+        - Fixed missing 'Child ID' prefix on first page header.
+        - **Dynamic Metadata**: The "Child ID: N/A" field now dynamically pulls the actual **Filename** entered during export, ensuring correct tracking throughout the document.
+- **Private Reference Pipeline**:
+    - Established `/reference_data` local-only folder.
+    - Configured `.gitignore` and `.vercelignore` to protect sensitive ground-truth training data from repository exposure.
+
+# Session Notes - Feb 20, 2026
+
+### 22. Continuous Learning & "Golden Reference" Implementation
+- **Objective**: Create a self-improving system where the AI learns from professional human-edited translations in real-time.
+- **Changes**:
+    - **Database Migration**: Created `20260220_add_is_golden.sql` to track "Golden" status and associated image URLs.
+    - **History UI Enhancement**: Added a **Star Toggle** in `HistoryView.tsx` to allow administrators to flag perfect records as "Golden References."
+    - **Dynamic AI Learning**:
+        - Modified `api/translate.ts` to fetch historical "Golden" examples based on the selected language.
+        - Implemented **Dynamic Few-Shot Injection**: The AI now sees the 2 most recent perfect examples within its prompt for every new request.
+    - **Backend Security**: 
+        - Created `services/supabaseServer.ts` to handle database interactions from Vercel Serverless functions using server-side security environment variables.
+- **Security & Access Control**:
+    - **Invite-Only Mode**: Transitioned the application to a closed membership model.
+    - **Manual Configuration**: Successfully disabled public sign-ups in Supabase Auth and verified the manual invitation workflow.
+- **Outcome**: The application is now a "Human-in-the-Loop" platform that matures in accuracy with every used translation.
 
 

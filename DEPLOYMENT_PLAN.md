@@ -166,7 +166,10 @@ To maintain stability during concurrent sessions:
 ### 6.3 SSL & Security
 *   **SSL/TLS**: Automated certificates via Let's Encrypt, managed by Vercel.
 *   **Data Residency**: Strict adherence to `ca-central-1` (Canada) for all database and file storage operations.
-*   **User Restriction**: Access is restricted via Supabase Auth. IT can manually manage the user whitelist in the Supabase Dashboard to ensure only authorized personnel can sign in.
+*   **User Restriction (Invite-Only)**:
+    *   **Configuration**: "Allow new users to sign up" is DISABLED in Supabase Auth settings.
+    *   **Manual Whitelist**: IT must manually invite users via email in the Supabase Dashboard.
+    *   **RLS Enforcement**: Row-Level Security ensures users can only access their own history even after being invited.
 
 ---
 
@@ -239,4 +242,24 @@ Use these prompts in Google NotebookLM (or ChatGPT/Gemini) to generate a profess
     *   **Problem**: Gemini sometimes stopped after Page 1 or produced "lazy" summaries.
     *   **Configuration**: Raised `temperature` to **1.0** to force context exploration.
     *   **Prompting**: Added "Global Scan" instructions to read *all* images before writing, and "Sequential Stitching" logic to bridge sentences across pages.
+
+---
+
+## 9. Continuous Learning: "Dynamic Few-Shot Engine" (Feb 20, 2026)
+
+### **A. Human-in-the-Loop Feedback**
+The system is now self-improving through a feedback loop between the human translators and the AI engine.
+
+1.  **Golden Reference Tagging**:
+    *   Administrators can "Star" high-quality, edited translations in the **History** view.
+    *   Tagged records are stored with an `is_golden: true` metadata flag in Supabase.
+
+2.  **Dynamic Prompt Injection**:
+    *   The `api/translate.ts` backend automatically queries the database for the 2 most recent "Golden" entries matching the current source language.
+    *   These perfect examples are injected into the AI's system prompt as "Few-Shot" examples.
+    *   **Result**: The AI learns the correct tone, vocabulary, and handwriting nuances in real-time without requiring model retraining.
+
+### **B. Maintenance Procedures**
+*   **New Migration**: `20260220_add_is_golden.sql` must be applied to the production database to enable columns for `is_golden` and `image_urls`.
+*   **API Security**: Uses `services/supabaseServer.ts` on the backend to securely interact with the database using restricted server-side environment variables.
 
