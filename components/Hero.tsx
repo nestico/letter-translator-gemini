@@ -24,9 +24,9 @@ export const Hero: React.FC<HeroProps> = ({ onStartTranslation }) => {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 pt-2">
-            <button 
-                onClick={onStartTranslation}
-                className="flex items-center justify-center h-12 px-6 rounded-lg bg-primary hover:bg-blue-600 text-white text-base font-bold transition-all shadow-lg shadow-primary/25 hover:shadow-primary/40"
+            <button
+              onClick={onStartTranslation}
+              className="flex items-center justify-center h-12 px-6 rounded-lg bg-primary hover:bg-blue-600 text-white text-base font-bold transition-all shadow-lg shadow-primary/25 hover:shadow-primary/40"
             >
               <span className="material-symbols-outlined mr-2 text-[20px]">upload_file</span>
               Start New Translation
@@ -41,21 +41,19 @@ export const Hero: React.FC<HeroProps> = ({ onStartTranslation }) => {
         </div>
         {/* Right Image */}
         <div className="flex-1 w-full relative">
-          <div className="absolute -inset-4 bg-primary/20 blur-3xl rounded-full opacity-50 pointer-events-none"></div>
-          <div 
-            className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-card-dark" 
+          <div className="absolute -inset-4 bg-primary/10 blur-3xl rounded-full opacity-30 pointer-events-none"></div>
+          <div
+            className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-card-dark"
             style={{
-                backgroundImage: "url('https://picsum.photos/800/600')",
-                backgroundSize: 'cover',
-                backgroundPosition: 'center'
+              backgroundImage: "url('https://images.unsplash.com/photo-1516414447565-b14be071340a?auto=format&fit=crop&q=80&w=1000')",
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
             }}
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-background-light/10 to-background-light dark:via-background-dark/30 dark:to-background-dark/90 flex items-center justify-end p-8">
-              <div className="hidden sm:flex flex-col gap-3 max-w-[240px] text-right">
-                <div className="h-2 w-full bg-slate-300 dark:bg-slate-600 rounded-full opacity-80"></div>
-                <div className="h-2 w-3/4 bg-slate-300 dark:bg-slate-600 rounded-full ml-auto opacity-70"></div>
-                <div className="h-2 w-5/6 bg-slate-300 dark:bg-slate-600 rounded-full ml-auto opacity-60"></div>
-                <div className="h-2 w-full bg-slate-300 dark:bg-slate-600 rounded-full opacity-50"></div>
+            {/* Simple clear overlay if needed, but keeping it clean for 'static' request */}
+            <div className="absolute inset-0 bg-black/5 flex items-end p-6">
+              <div className="bg-white/90 dark:bg-black/60 backdrop-blur-md px-4 py-2 rounded-lg border border-white/20 shadow-xl">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-primary dark:text-blue-400">Sample Document</span>
               </div>
             </div>
           </div>
