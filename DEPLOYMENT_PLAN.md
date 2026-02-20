@@ -210,28 +210,25 @@ Use these prompts in Google NotebookLM (or ChatGPT/Gemini) to generate a profess
 
 ## 8. Session Log: Technical Overhaul (Jan 20, 2026)
 
-### **A. Branding & UI Updates**
-1.  **Rebranding**: Scaled the UI to match "Children Believe" identity.
-    *   **Navbar**: Implemented a white, sticky navbar (`z-50`) with the official logo (`h-12`).
-    *   **Colors**: Updated primary actions to use brand purple (`#522d6d`) and simplified the color palette.
-    *   **Hero**: Cleaned up the landing area, removing redundant logos and reverting to a stable dark/light theme structure.
-2.  **Language Selection Control**:
-    *   **Source Language**: Restored the dropdown to allow explicit user selection (e.g., Telugu, Spanish), improving AI accuracy.
-    *   **Target Language**: Locked to "English" (Disabled/Read-Only) to prevent misconfiguration.
+### **A. Branding & UI Overhaul (Feb 20, 2026)**
+1.  **Corporate Identity**: Full visual conversion to "Children Believe" standard.
+    *   **Navbar**: Standardized layout with logo on the Left and Actions on the Right. Implemented solid brand primary background (`#9b4db1`).
+    *   **Footer**: Redesigned to match the Navbar for a cohesive branded "sandwich" experience.
+    *   **Hero Image**: Switched from dynamic placeholders to a high-quality static asset (`hero-letter.jpg`) hosted locally for 100% reliability and professional first impression.
+2.  **Versioning Transparency**:
+    *   **Implementation**: Added a persistent version tag (`v1.0.5`) in the UI. 
+    *   **Purpose**: Allows users and IT support to verify they are seeing the latest deployed code on Vercel, bypassing browser cache issues.
 
-### **B. Gemini Service Optimization (High Concurrency)**
-1.  **Repetition Loop Fix**:
-    *   **Problem**: The model was entering infinite character loops (e.g., "s's's's") during PDF export.
-    *   **Solution**:
-        *   **Maximal Penalties**: Increased `frequencyPenalty` to **1.5** and `presencePenalty` to **1.0**.
-        *   **Stop Sequences**: Configured `stopSequences: ["END_OF_TRANSLATION"]` as a hard circuit breaker.
-        *   **Binary Stop Rule**: Updated prompt to strictly command: *"Output EXACTLY ONCE... STOP IMMEDIATELY after signature"*.
-2.  **Concurrency Management**:
-    *   **Jittered Backoff**: Enhanced `generateWithRetry` to include random jitter (0-1000ms). This prevents "thundering herd" issues where multiple users hitting a rate limit retry at the exact same millisecond.
-    *   **Payload Protection**: Added a client-side check to warn if image payloads exceed **20MB** (preventing `413` errors).
-3.  **Accuracy Logic**:
-    *   **System Judge**: Added a self-correction step in the prompt: *"Verify: Did I output the translation exactly once? Did I stop at the signature?"*.
-    *   **Metadata Isolation**: Enforced strict separation of Child ID/Name into a separate JSON object to prevent leakage into the translation body.
+### **B. Reliability & Stability Hardening (Feb 20, 2026)**
+1.  **"Nuclear" Sign-Out Resiliency**: 
+    *   **Mechanism**: Sign-out now explicitly calls `localStorage.clear()` and `sessionStorage.clear()`.
+    *   **Benefit**: Eliminates "zombie" sessions where users appeared logged in after a refresh due to cached Supabase tokens.
+2.  **History & Modal Synchronization**:
+    *   **Loading States**: Wrapped all history fetches in `try-catch-finally` to ensure loading spinners never get stuck.
+    *   **Auth Modal**: Added a 1.5s fallback close timer to handle scenarios where the global auth listener fails to trigger, ensuring successful logins never leave the user staring at a loading modal.
+3.  **Activity Tracking**:
+    *   **Implementation**: Launched the `activity` table in the database.
+    *   **Data Captured**: Logs `LOGIN`, `LOGOUT`, and `TRANSLATE` actions for audit trails and usage analytics.
 
 ### **C. Queue & Multi-Page Fidelity (Update Jan 20 PM)**
 1.  **Request Queuing (Rate Protection)**:

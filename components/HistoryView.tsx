@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { User, TranslationRecord } from '../types';
 import { getTranslations, toggleGoldenStatus } from '../services/translationService';
+import { logActivity } from '../services/activityService';
 
 interface HistoryViewProps {
     user: User;
@@ -14,9 +15,19 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ user, onBack }) => {
 
     useEffect(() => {
         loadHistory();
+        // Log view history event
+        logActivity(user.id, 'VIEW_HISTORY').catch(() => { });
     }, [user.id]);
 
     const loadHistory = async () => {
+        // Safety timeout - force close loading after 10 seconds no matter what
+        const timeoutId = setTimeout(() => {
+            if (loading) {
+                console.warn("History fetch timed out. Forcing loading state to false.");
+                setLoading(false);
+            }
+        }, 10000);
+
         try {
             setLoading(true);
             const data = await getTranslations(user.id);
@@ -25,6 +36,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ user, onBack }) => {
             console.error("Critical error loading history:", err);
             setHistory([]);
         } finally {
+            clearTimeout(timeoutId);
             setLoading(false);
         }
     };
@@ -73,7 +85,14 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ user, onBack }) => {
             ) : history.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-64 text-center">
                     <span className="material-symbols-outlined text-6xl text-slate-200 dark:text-slate-700 mb-4">history_toggle_off</span>
-                    <p className="text-lg text-slate-400">No translations found.</p>
+                    <p className="text-lg text-slate-400 mb-6">No translations found.</p>
+                    <button
+                        onClick={loadHistory}
+                        className="flex items-center gap-2 px-6 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-sm"
+                    >
+                        <span className="material-symbols-outlined text-[18px]">refresh</span>
+                        Refresh History
+                    </button>
                 </div>
             ) : (
                 <div className="bg-white dark:bg-card-dark rounded-xl border border-slate-200 dark:border-border-dark overflow-hidden shadow-sm">

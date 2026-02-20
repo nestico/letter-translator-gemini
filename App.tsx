@@ -11,7 +11,7 @@ import { HistoryView } from './components/HistoryView';
 import { ChatBot } from './components/ChatBot';
 import { User, AppState } from './types';
 import { supabase } from './services/supabase';
-import { logActivity } from './services/activity';
+import { logActivity } from './services/activityService';
 
 
 console.log("App Module Loading...");
@@ -44,7 +44,7 @@ function App() {
         setUser(newUser);
         // Log login activity (optional debouncing could be good but keeping simple)
         if (_event === 'SIGNED_IN') {
-          await logActivity(session.user.id, 'LOGIN', { method: 'email' });
+          logActivity(session.user.id, 'LOGIN', { method: 'email' }).catch(console.error);
           // Auto-close modal and stay on home page
           setAuthModalOpen(false);
           // Note: Removing the setAppState(AppState.APP) to keep user on Home Page
