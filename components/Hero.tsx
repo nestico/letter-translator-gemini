@@ -43,9 +43,9 @@ export const Hero: React.FC<HeroProps> = ({ onStartTranslation }) => {
         <div className="flex-1 w-full relative">
           <div className="absolute -inset-4 bg-primary/10 blur-3xl rounded-full opacity-30 pointer-events-none"></div>
           <div
-            className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-card-dark"
+            className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl border border-slate-200 dark:border-border-dark bg-slate-100 dark:bg-card-dark"
             style={{
-              backgroundImage: "url('https://images.unsplash.com/photo-1543167123-26154564858b?auto=format&fit=crop&q=80&w=1000')",
+              backgroundImage: "url('/images/hero-letter.jpg')",
               backgroundSize: 'cover',
               backgroundPosition: 'center'
             }}
