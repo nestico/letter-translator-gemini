@@ -18,7 +18,10 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onSignIn, onSignOut, onNav
           onClick={onNavigateHome}
         >
           <span className="material-symbols-outlined text-primary text-3xl">edit_note</span>
-          <h2 className="text-lg font-bold leading-tight tracking-tight">Letter Translator</h2>
+          <div className="flex flex-col">
+            <h2 className="text-lg font-bold leading-tight tracking-tight">Letter Translator</h2>
+            <span className="text-[10px] text-slate-400 font-mono">v1.0.5 (Build: Feb20)</span>
+          </div>
         </div>
         <div className="flex items-center gap-4 sm:gap-8">
           {user && (

@@ -86,20 +86,23 @@ function App() {
     try {
       console.log("Signing out user...");
       if (user) {
-        // Fire and forget logout logging
         logActivity(user.id, 'LOGOUT').catch(e => console.error("Logout log fail:", e));
       }
 
-      // Clear state immediately for UI responsiveness
+      // 1. Reset React State immediately
       setUser(null);
       setAppState(AppState.LANDING);
 
-      // Perform Supabase sign out
+      // 2. Force Clear Browser Persistence (The "Nuclear Option")
+      localStorage.clear();
+      sessionStorage.clear();
+
+      // 3. Inform Supabase (Fire and Forget)
       await supabase.auth.signOut();
-      console.log("Signed out successfully from Supabase");
+
+      console.log("Sign out completed successfully.");
     } catch (err) {
       console.error("Sign out error:", err);
-      // Ensure state is cleared even on error
       setUser(null);
       setAppState(AppState.LANDING);
     }
