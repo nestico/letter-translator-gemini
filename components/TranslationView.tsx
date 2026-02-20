@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { translateImage } from '../services/geminiService';
 import { User, TranslationResult } from '../types';
-import { logActivity } from '../services/activity';
+import { logActivity } from '../services/activityService';
 import { saveTranslation } from '../services/translationService';
 import { jsPDF } from 'jspdf';
 

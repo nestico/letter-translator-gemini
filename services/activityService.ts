@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 
-export type ActivityType = 'LOGIN' | 'LOGOUT' | 'TRANSLATE' | 'VIEW_HISTORY' | 'EXPORT_PDF';
+export type ActivityType = 'LOGIN' | 'LOGOUT' | 'TRANSLATE' | 'TRANSLATE_LETTER' | 'VIEW_HISTORY' | 'EXPORT_PDF';
 
 export const logActivity = async (
     userId: string,
