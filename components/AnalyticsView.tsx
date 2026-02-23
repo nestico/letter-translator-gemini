@@ -8,6 +8,11 @@ interface AnalyticsViewProps {
     onBack: () => void;
 }
 
+interface UserActivity {
+    email: string;
+    uploadCount: number;
+}
+
 interface Stats {
     totalLetters: number;
     topLanguages: { lang: string; count: number }[];
@@ -17,6 +22,7 @@ interface Stats {
     topUsers: { email: string; count: number }[];
     recentActivity: ActivityRecord[];
     alerts: { id: string; type: 'low_confidence'; message: string; date: string; details: any }[];
+    userActivities: UserActivity[];
 }
 
 export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onBack }) => {
@@ -31,7 +37,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onBack }) =>
         try {
             setLoading(true);
             const data = await getAllTranslations();
-            const activity = await getGlobalActivity(50); // Increased limit to find more alerts
+            const activity = await getGlobalActivity(200); // Higher limit for better 30-day summary
 
             if (!data) return;
 
@@ -67,17 +73,26 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onBack }) =>
             });
             const lettersByDay = Object.entries(dayMap).map(([date, count]) => ({ date, count }));
 
-            // Users Analysis
-            const userMap: Record<string, number> = {};
-            data.forEach(r => {
-                const uId = r.user_id || 'System';
-                userMap[uId] = (userMap[uId] || 0) + 1;
+            // User Uploads (Last 30 Days)
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(today.getDate() - 30);
+
+            const userUploadMap: Record<string, { count: number, email?: string }> = {};
+
+            // Check activity logs for recent translations to get emails
+            activity.forEach(act => {
+                const createdAt = new Date(act.created_at);
+                if (act.action === 'TRANSLATE_LETTER' && createdAt >= thirtyDaysAgo) {
+                    const uId = act.user_id;
+                    const email = act.details?.email;
+                    if (!userUploadMap[uId]) {
+                        userUploadMap[uId] = { count: 0, email: email };
+                    } else if (email && !userUploadMap[uId].email) {
+                        userUploadMap[uId].email = email;
+                    }
+                    userUploadMap[uId].count++;
+                }
             });
-            const uniqueUsers = Object.keys(userMap).length;
-            const topUsers = Object.entries(userMap)
-                .map(([email, count]) => ({ email, count }))
-                .sort((a, b) => b.count - a.count)
-                .slice(0, 5);
 
             // COMPUTE ALERTS: Find low confidence translations in activity
             const alerts: Stats['alerts'] = [];
@@ -93,15 +108,22 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onBack }) =>
                 }
             });
 
+            // Mapping for display
+            const userActivities = Object.entries(userUploadMap).map(([id, data]) => ({
+                email: data.email || `Staff: ${id.split('-')[0]}...`,
+                uploadCount: data.count
+            })).sort((a, b) => b.uploadCount - a.uploadCount);
+
             setStats({
                 totalLetters,
                 topLanguages,
                 lettersByDay,
                 goldenCount,
-                uniqueUsers,
-                topUsers,
+                uniqueUsers: Object.keys(userUploadMap).length,
+                topUsers: [], // Deprecated in favor of userActivities
                 recentActivity: activity,
-                alerts
+                alerts,
+                userActivities
             });
         } catch (err) {
             console.error("Failed to load stats", err);
@@ -258,63 +280,52 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onBack }) =>
                             </div>
                         </div>
 
-                        {/* RECENT ACTIVITY FEED (GLOBAL) */}
+                        {/* USER ACTIVITY SUMMARY (LAST 30 DAYS) */}
                         <div className="lg:col-span-4 bg-white dark:bg-card-dark p-6 rounded-2xl shadow-premium border border-slate-200 dark:border-border-dark">
                             <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
                                 <h4 className="font-black text-slate-900 dark:text-white uppercase tracking-wider text-sm flex items-center gap-2">
                                     <span className="w-2 h-4 bg-green-500 rounded-full"></span>
-                                    Global Audit Log
+                                    User Activity Summary (Last 30 Days)
                                 </h4>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left">
                                     <thead>
                                         <tr className="text-[10px] font-black uppercase text-slate-400 tracking-widest border-b border-slate-50 dark:border-slate-800">
-                                            <th className="py-3 px-4">Action</th>
-                                            <th className="py-3 px-4">Entity</th>
-                                            <th className="py-3 px-4">Region</th>
-                                            <th className="py-3 px-4">Confidence</th>
-                                            <th className="py-3 px-4">Timestamp</th>
+                                            <th className="py-3 px-4">Staff Member Email</th>
+                                            <th className="py-3 px-4">Files Uploaded</th>
+                                            <th className="py-3 px-4">Impact Score</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {stats.recentActivity.map((act) => (
-                                            <tr key={act.id} className="border-b border-slate-50 dark:border-slate-800/50 hover:bg-slate-50/50 transition-colors">
-                                                <td className="py-4 px-4">
-                                                    <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-wider ${act.action === 'TRANSLATE_LETTER' ? 'bg-blue-100 text-blue-700' :
-                                                        act.action === 'EXPORT_PDF' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-700'
-                                                        }`}>
-                                                        {act.action.replace('_', ' ')}
-                                                    </span>
-                                                </td>
+                                        {stats.userActivities.map((act, i) => (
+                                            <tr key={i} className="border-b border-slate-50 dark:border-slate-800/50 hover:bg-slate-50/50 transition-colors">
                                                 <td className="py-4 px-4 font-bold text-slate-700 dark:text-slate-300 text-sm">
-                                                    {act.details?.child_id || act.details?.filename || 'System Action'}
+                                                    {act.email}
                                                 </td>
-                                                <td className="py-4 px-4 font-bold text-slate-500 dark:text-slate-400 text-sm">
-                                                    {act.details?.language || 'Global'}
+                                                <td className="py-4 px-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="font-black text-slate-900 dark:text-white">{act.uploadCount}</span>
+                                                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">Documents</span>
+                                                    </div>
                                                 </td>
-                                                <td className="py-4 px-4 text-sm">
-                                                    {act.action === 'TRANSLATE_LETTER' && act.details?.confidence ? (
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-12 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                                                <div
-                                                                    className={`h-full ${act.details.confidence < 0.7 ? 'bg-red-500' : 'bg-green-500'}`}
-                                                                    style={{ width: `${act.details.confidence * 100}%` }}
-                                                                ></div>
-                                                            </div>
-                                                            <span className={`text-[10px] font-black ${act.details.confidence < 0.7 ? 'text-red-500' : 'text-slate-400'}`}>
-                                                                {Math.round(act.details.confidence * 100)}%
-                                                            </span>
+                                                <td className="py-4 px-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-24 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                                            <div
+                                                                className="h-full bg-green-500"
+                                                                style={{ width: `${Math.min((act.uploadCount / (stats.totalLetters || 1)) * 100 * 5, 100)}%` }}
+                                                            ></div>
                                                         </div>
-                                                    ) : (
-                                                        <span className="text-slate-300">--</span>
-                                                    )}
-                                                </td>
-                                                <td className="py-4 px-4 text-xs font-medium text-slate-400">
-                                                    {new Date(act.created_at).toLocaleString()}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
+                                        {stats.userActivities.length === 0 && (
+                                            <tr>
+                                                <td colSpan={3} className="py-8 text-center text-slate-400 italic">No activity recorded in the last 30 days.</td>
+                                            </tr>
+                                        )}
                                     </tbody>
                                 </table>
                             </div>

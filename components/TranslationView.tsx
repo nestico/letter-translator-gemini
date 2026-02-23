@@ -86,9 +86,11 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
 
          if (user) {
             logActivity(user.id, 'TRANSLATE_LETTER', {
+               email: user.email,
                language: data.detectedLanguage,
                confidence: data.confidenceScore,
-               pages: images.length
+               pages: images.length,
+               child_id: exportFileName.split('.')[0] || 'Unknown'
             });
          }
 
@@ -394,6 +396,13 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
          console.error("Export failed:", err);
          alert("An error occurred while exporting.");
       } finally {
+         if (user) {
+            logActivity(user.id, 'EXPORT_PDF', {
+               email: user.email,
+               filename: fileName,
+               format: exportFormat
+            }).catch(console.error);
+         }
          setIsExporting(false);
       }
    };

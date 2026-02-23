@@ -8,6 +8,8 @@ export const logActivity = async (
     metadata: Record<string, any> = {}
 ): Promise<boolean> => {
     try {
+        // Attempt to get user email from metadata or session if possible
+        // But for now, we expect metadata.email to be passed from the caller
         const { error } = await supabase
             .from('activity')
             .insert({

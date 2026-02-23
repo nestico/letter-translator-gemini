@@ -2,6 +2,7 @@ export interface User {
   id: string; // Add ID from Supabase Auth
   email: string;
   name: string;
+  isAdmin?: boolean;
 }
 
 export interface TranslationResult {

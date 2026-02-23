@@ -16,8 +16,16 @@ import { logActivity } from './services/activityService';
 
 
 console.log("App Module Loading...");
+// List of unauthorized emails that should NOT see analytics
+const ADMIN_EMAILS = [
+  'nestico@childrenbelieve.ca', // Primary Admin
+  // Add other admin emails here as decided
+];
+
 function App() {
   const [user, setUser] = useState<User | null>(null);
+
+  const checkAdmin = (email: string) => ADMIN_EMAILS.includes(email);
 
   useEffect(() => {
     // Check active session
@@ -27,6 +35,7 @@ function App() {
           id: session.user.id,
           email: session.user.email!,
           name: session.user.user_metadata.full_name || session.user.email!.split('@')[0],
+          isAdmin: checkAdmin(session.user.email!),
         });
         setAuthModalOpen(false); // Close modal if already logged in
       }
@@ -37,15 +46,16 @@ function App() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
-        const newUser = {
+        const newUser: User = {
           id: session.user.id,
           email: session.user.email!,
           name: session.user.user_metadata.full_name || session.user.email!.split('@')[0],
+          isAdmin: checkAdmin(session.user.email!),
         };
         setUser(newUser);
         // Log login activity (optional debouncing could be good but keeping simple)
         if (_event === 'SIGNED_IN') {
-          logActivity(session.user.id, 'LOGIN', { method: 'email' }).catch(console.error);
+          logActivity(session.user.id, 'LOGIN', { email: session.user.email, method: 'email' }).catch(console.error);
           // Auto-close modal and stay on home page
           setAuthModalOpen(false);
           // Note: Removing the setAppState(AppState.APP) to keep user on Home Page
@@ -53,7 +63,6 @@ function App() {
         }
       } else {
         setUser(null);
-
       }
     });
 

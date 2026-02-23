@@ -35,12 +35,14 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onSignIn, onSignOut, onNav
               >
                 History
               </button>
-              <button
-                onClick={onNavigateAnalytics}
-                className="text-sm font-bold text-white/90 hover:text-white transition-colors border-b-2 border-transparent hover:border-white/40 pb-1"
-              >
-                Analytics
-              </button>
+              {user.isAdmin && (
+                <button
+                  onClick={onNavigateAnalytics}
+                  className="text-sm font-bold text-white/90 hover:text-white transition-colors border-b-2 border-transparent hover:border-white/40 pb-1"
+                >
+                  Analytics
+                </button>
+              )}
             </nav>
           )}
 
