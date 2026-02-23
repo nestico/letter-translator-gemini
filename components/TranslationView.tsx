@@ -33,6 +33,7 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
    const [translatorName, setTranslatorName] = useState(user?.name || 'Children Believe AI');
    const [isSaving, setIsSaving] = useState(false);
    const [hasSaved, setHasSaved] = useState(false);
+   const [isExporting, setIsExporting] = useState(false);
 
    useEffect(() => {
       if (user?.name) {
@@ -171,7 +172,8 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
    };
 
    const handleExportConfirm = async () => {
-      if (!editedResult) return;
+      if (!editedResult || isExporting) return;
+      setIsExporting(true);
 
       let fileName = exportFileName.trim();
       if (!fileName) fileName = 'letter_translation';
@@ -355,6 +357,7 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
          } catch (e) {
             console.error("PDF Logic Failure:", e);
             alert("Error generating PDF: " + (e as Error).message);
+            setIsExporting(false);
             return;
          }
       } else {
@@ -388,18 +391,22 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
 
             await writable.close();
             setShowExportModal(false);
+            setIsExporting(false);
             return;
          }
       } catch (err: any) {
-         if (err.name !== 'AbortError') {
-            console.warn("File System Access API failed, falling back:", err);
-         } else {
+         if (err.name === 'AbortError') {
+            setIsExporting(false);
             return;
          }
+         console.warn("File System Access API failed, falling back:", err);
       }
 
       // Fallback: Legacy Download Link
       try {
+         // Close modal before fallback to avoid double-clicks
+         setShowExportModal(false);
+
          if (isPdf && pdfDoc) {
             console.log("Saving PDF as (fallback):", fileName);
             pdfDoc.save(fileName);
@@ -416,10 +423,11 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                URL.revokeObjectURL(url);
             }, 100);
          }
-         setShowExportModal(false);
       } catch (err) {
          console.error("Export failed:", err);
          alert("An error occurred while exporting.");
+      } finally {
+         setIsExporting(false);
       }
    };
 
@@ -869,10 +877,11 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                      </button>
                      <button
                         onClick={handleExportConfirm}
-                        className="flex-1 h-12 rounded-lg bg-primary hover:bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2"
+                        disabled={isExporting}
+                        className={`flex-1 h-12 rounded-lg bg-primary hover:bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 ${isExporting ? 'opacity-70 cursor-wait' : ''}`}
                      >
-                        <span className="material-symbols-outlined text-[20px]">download</span>
-                        Export
+                        <span className="material-symbols-outlined text-[20px]">{isExporting ? 'sync' : 'download'}</span>
+                        {isExporting ? 'Exporting...' : 'Export'}
                      </button>
                   </div>
                </div>
