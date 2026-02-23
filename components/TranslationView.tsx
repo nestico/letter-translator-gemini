@@ -92,13 +92,17 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
             });
          }
 
-      } catch (error) {
+      } catch (error: any) {
          console.error('Processing error:', error);
-         const errString = String(error instanceof Error ? error.message : error);
-         if (errString.includes("429") || errString.toLowerCase().includes("quota")) {
-            setError("Processing failed: API Quota Exceeded. The AI service is currently busy. Please try again later.");
+
+         // Extract specific error from server response if available
+         const serverError = error.response?.data?.error || error.message || String(error);
+         const isRateLimit = serverError.includes("429") || serverError.toLowerCase().includes("quota") || error.status === 429;
+
+         if (isRateLimit) {
+            setError("The AI service is temporarily busy due to high volume. Please take a quick break and try again in about 5-10 minutes.");
          } else {
-            setError(`Failed to process: ${errString}`);
+            setError(`Failed to process: ${serverError}`);
          }
       } finally {
          setIsProcessing(false);
@@ -570,15 +574,33 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                   {!result && !isProcessing && (
                      <div className="h-full flex flex-col items-center justify-center text-slate-400 p-8">
                         {error ? (
-                           <div className="flex flex-col items-center text-red-500 animate-in fade-in zoom-in">
-                              <span className="material-symbols-outlined text-6xl mb-4">error</span>
-                              <h3 className="text-xl font-bold mb-2">Translation Failed</h3>
-                              <p className="text-center text-slate-600 dark:text-slate-300 mb-6 max-w-sm">{error}</p>
+                           <div className="flex flex-col items-center animate-in fade-in zoom-in text-center p-6">
+                              {error.includes("busy") ? (
+                                 <>
+                                    <div className="w-20 h-20 bg-amber-50 dark:bg-amber-900/20 rounded-full flex items-center justify-center mb-6">
+                                       <span className="material-symbols-outlined text-5xl text-amber-500 animate-pulse">coffee</span>
+                                    </div>
+                                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">System is Busy</h3>
+                                    <p className="text-slate-600 dark:text-slate-300 mb-8 max-w-sm leading-relaxed">
+                                       With teams across 7 countries, we occasionally hit peak capacity.
+                                       <strong> Please wait about 10 minutes</strong> before retrying this document.
+                                    </p>
+                                 </>
+                              ) : (
+                                 <>
+                                    <span className="material-symbols-outlined text-6xl text-red-500 mb-4">error</span>
+                                    <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Translation Failed</h3>
+                                    <p className="text-slate-600 dark:text-slate-300 mb-6 max-w-sm">{error}</p>
+                                 </>
+                              )}
+
                               <button
                                  onClick={handleProcessStart}
-                                 className="px-6 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg font-semibold transition-colors"
+                                 className={`px-8 h-12 rounded-full font-bold transition-all shadow-lg ${error.includes("busy")
+                                    ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
+                                    : 'bg-red-500 hover:bg-red-600 text-white shadow-red-500/20'}`}
                               >
-                                 Try Again
+                                 {error.includes("busy") ? 'Check System Status' : 'Try Again'}
                               </button>
                            </div>
                         ) : (

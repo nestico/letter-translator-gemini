@@ -189,6 +189,17 @@ export default async function handler(req: any, res: any) {
 
     } catch (error: any) {
         console.error("Server-side Gemini Error:", error);
+
+        const isRateLimit = error.message?.includes('429') || error.status === 429;
+        const isOverloaded = error.message?.includes('503') || error.status === 503;
+
+        if (isRateLimit || isOverloaded) {
+            return res.status(429).json({
+                error: 'The AI service is temporarily busy due to high volume. Please wait about 5-10 minutes before retrying.',
+                code: 'RATE_LIMIT_EXCEEDED'
+            });
+        }
+
         return res.status(500).json({ error: error.message || 'Internal Server Error' });
     }
 }
