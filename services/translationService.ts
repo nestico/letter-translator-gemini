@@ -96,3 +96,23 @@ export const getGoldenReferences = async (language: string, limit: number = 3): 
         return [];
     }
 };
+
+
+export const getAllTranslations = async (): Promise<TranslationRecord[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('translations')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Error fetching all translations:', error);
+            return [];
+        }
+
+        return data as TranslationRecord[];
+    } catch (err) {
+        console.error('Exception fetching all translations:', err);
+        return [];
+    }
+};

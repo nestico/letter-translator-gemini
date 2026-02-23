@@ -44,3 +44,11 @@ export interface TranslationRecord {
   is_golden?: boolean;
   image_urls?: string[]; // To reference the images used for this translation
 }
+export interface ActivityRecord {
+  id: string;
+  user_id: string;
+  action: string;
+  details: any;
+  created_at: string;
+  username_cached?: string; // Opt-in field for analytics display
+}

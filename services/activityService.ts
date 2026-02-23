@@ -26,3 +26,22 @@ export const logActivity = async (
         return false;
     }
 };
+
+export const getGlobalActivity = async (limit: number = 20): Promise<any[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('activity')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(limit);
+
+        if (error) {
+            console.error('Error fetching global activity:', error);
+            return [];
+        }
+        return data;
+    } catch (err) {
+        console.error('Exception fetching global activity:', err);
+        return [];
+    }
+};
