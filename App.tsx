@@ -7,6 +7,7 @@ import { AuthModal } from './components/AuthModal';
 import { TranslationView } from './components/TranslationView';
 import { UploadView } from './components/UploadView';
 import { HistoryView } from './components/HistoryView';
+import { AnalyticsView } from './components/AnalyticsView';
 
 import { ChatBot } from './components/ChatBot';
 import { User, AppState } from './types';
@@ -118,6 +119,7 @@ function App() {
         onSignOut={handleSignOut}
         onNavigateHome={() => setAppState(AppState.LANDING)}
         onNavigateHistory={() => setAppState(AppState.HISTORY)}
+        onNavigateAnalytics={() => setAppState(AppState.ANALYTICS)}
       />
 
       <main className="flex-1 w-full flex flex-col items-center">
@@ -173,6 +175,13 @@ function App() {
 
         {appState === AppState.HISTORY && user && (
           <HistoryView
+            user={user}
+            onBack={() => setAppState(AppState.LANDING)}
+          />
+        )}
+
+        {appState === AppState.ANALYTICS && user && (
+          <AnalyticsView
             user={user}
             onBack={() => setAppState(AppState.LANDING)}
           />

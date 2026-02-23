@@ -3,13 +3,23 @@ import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 const LANGUAGE_SPECIFIC_RULES = {
     "Telugu": {
         role: "Telugu Script Expert",
-        special_instructions: "Pay special attention to the distinction between the Child (beneficiary) and the Writer (scribe/parent). Do not confuse their identities. Look for specific mentions of seasonal crops (Mangoes, Jamun), festivals (Sankranti), and school details.",
+        special_instructions: "Pay special attention to the distinction between the Child (beneficiary) and the Writer (scribe/parent). Do not confuse their identities. Look for specific mentions of crops like Groundnut, Green Gram, and Maize. Identify specific locations like Gunadala Hill in Vijayawada. Do not overlook mentions of head-shaving ceremonies or specific age milestones (e.g., 15 months).",
         negative_constraints: ["Do not invent Christmas", "Do not invent Goats", "Do not invent Rice", "Do not invent Temples"]
+    },
+    "Tamil": {
+        role: "Tamil Cultural Linguist",
+        special_instructions: "Identify mentions of local committees like CFAM (Child Friendly Accountability Mechanism) and VDC (Village Development Committee). Look for festivals like Diwali, Vinayagar Chaturthi (processions with drums), and Children's Day (cake cutting). Distinguish between the child and mother's participation in community events organized by IRCDS.",
+        negative_constraints: []
     },
     "Amharic": {
         role: "Specialist Amharic Archivist",
-        special_instructions: "100% LITERAL FIDELITY. Use trusted reference data. Look for specific characters like 'ፍየል' (goat) only if visually present. Identify the child's name accurately.",
+        special_instructions: "100% LITERAL FIDELITY. Use trusted reference data. Look for specific characters like 'ፍየል' (goat) only if visually present. Identify mentions of helping parents with water fetching and herding. Recognize 'Dear Barry Rokosh' or other specific sponsor names.",
         negative_constraints: ["Do not summarize", "Do not simplify", "Do not invent generic blessings"]
+    },
+    "Afan Oromo": {
+        role: "Oromo Language Specialist",
+        special_instructions: "Recognize mentions of 'Teff/Xaafi' and specific food supplies provided by gift money. Identify mentions of wise spending on clothes and family discussions. Ensure the narrative flows as a direct communication between child and sponsor.",
+        negative_constraints: []
     },
     "Spanish": {
         role: "Latin American Spanish Specialist",
@@ -43,7 +53,7 @@ const generateWithRetry = async (model: any, contentParts: any[], retries = 3, i
     }
 };
 
-// Deployment Trigger: 2026-02-19T13:40
+// Deployment Trigger: 2026-02-23T10:05
 export default async function handler(req: any, res: any) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });

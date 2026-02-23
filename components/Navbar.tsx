@@ -7,9 +7,10 @@ interface NavbarProps {
   onSignOut: () => void;
   onNavigateHome: () => void;
   onNavigateHistory: () => void;
+  onNavigateAnalytics: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ user, onSignIn, onSignOut, onNavigateHome, onNavigateHistory }) => {
+export const Navbar: React.FC<NavbarProps> = ({ user, onSignIn, onSignOut, onNavigateHome, onNavigateHistory, onNavigateAnalytics }) => {
   return (
     <header className="w-full bg-primary sticky top-0 z-50 shadow-md">
       <div className="max-w-[1280px] mx-auto px-4 lg:px-10 h-16 flex items-center justify-between text-white">
@@ -33,6 +34,12 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onSignIn, onSignOut, onNav
                 className="text-sm font-bold text-white/90 hover:text-white transition-colors border-b-2 border-transparent hover:border-white/40 pb-1"
               >
                 History
+              </button>
+              <button
+                onClick={onNavigateAnalytics}
+                className="text-sm font-bold text-white/90 hover:text-white transition-colors border-b-2 border-transparent hover:border-white/40 pb-1"
+              >
+                Analytics
               </button>
             </nav>
           )}

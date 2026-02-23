@@ -228,15 +228,18 @@ Use these prompts in Google NotebookLM (or ChatGPT/Gemini) to generate a profess
     *   **Implementation**: Launched the `activity` table.
     *   **Corrected Schema**: Fixed the mapping of `details` vs `metadata` in the database connector.
 
-### **C. Queue & Multi-Page Fidelity (Update Jan 20 PM)**
-1.  **Request Queuing (Rate Protection)**:
-    *   **Architecture**: Implemented `p-queue` to manage API ingress.
-    *   **Traffic Shaping**: Limit **1 request** at a time per client (Sequential) with a global rate cap of **10 req/min**.
-    *   **User Feedback**: Added UI indicators for "Queue Position #X" and "Estimated Wait Time" to manage expectations.
-2.  **Anti-Laziness Strategy (Tamil/Spanish)**:
-    *   **Problem**: Gemini sometimes stopped after Page 1 or produced "lazy" summaries.
-    *   **Configuration**: Raised `temperature` to **1.0** to force context exploration.
     *   **Prompting**: Added "Global Scan" instructions to read *all* images before writing, and "Sequential Stitching" logic to bridge sentences across pages.
+
+### **D. Script-Specific Fidelity & Management (Feb 23, 2026)**
+1.  **Advanced PDF Multi-Font Support**:
+    *   **Implementation**: Integrated `Noto Sans` family fonts (Tamil, Telugu, Ethiopic, Latin) into the PDF export pipeline.
+    *   **Result**: PDFs now include the **Original Transcription** in native scripts and full English translations without character dropping.
+2.  **Universal Search**:
+    *   **Implementation**: Added a real-time filtering engine to the History view.
+    *   **Capability**: Users can search by Child ID, Name, Language, or Filename.
+3.  **Admin Management Dashboard**:
+    *   **Implementation**: Launched the **Analytics View** providing high-level KPIs (Total letters, language distribution, activity trends).
+    *   **Branding**: Dashboard uses standard brand color palettes and premium card-based layout.
 
 ---
 
@@ -259,16 +262,16 @@ The system is now self-improving through a feedback loop between the human trans
 
 ---
 
-## 10. Future Enhancements & Technical Debt (Planned for Next Session: Monday)
+### **A. Immediate Priorities (Completed Feb 23)**
+1.  **Advanced PDF Multi-Font Support** (DONE)
+2.  **Universal Search & Filtering** (DONE)
+3.  **Admin Usage Dashboard** (DONE)
 
-### **A. Immediate Priorities**
-1.  **Advanced PDF Multi-Font Support**:
-    *   **Limitation**: Current PDF export strips non-ASCII characters (Telugu, Amharic) for stability.
-    *   **Goal**: Integrate custom `.ttf` fonts (`Noto Sans`) into `jsPDF` builds to allow original script exports in PDF.
-2.  **Universal Search & Filtering**:
-    *   **Goal**: Add a search bar to the **History View** to allow users to quickly find letters by Child ID, Date, or Translator name.
-3.  **Admin Usage Dashboard**:
-    *   **Goal**: Create a restricted view for managers to see global statistics (Total Letters Translated, Most Active Regions) via the `activity` table.
+### **B. Next Iteration Priorities**
+1.  **Batch Export**:
+    *   **Goal**: Allow users to select multiple letters in History and download a single merged PDF or ZIP of all translations.
+2.  **Bulk "Golden" Ingestion**:
+    *   **Goal**: Create a tool for administrators to upload a CSV of existing verified translations to bulk-populate the Dynamic Few-Shot Engine.
 
 ### **B. Long-term Hardening**
 1.  **PWA (Offline Support)**:

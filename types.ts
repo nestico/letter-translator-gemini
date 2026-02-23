@@ -23,7 +23,8 @@ export interface ChatMessage {
 export enum AppState {
   LANDING = 'LANDING',
   APP = 'APP',
-  HISTORY = 'HISTORY'
+  HISTORY = 'HISTORY',
+  ANALYTICS = 'ANALYTICS'
 }
 
 export interface AuthState {

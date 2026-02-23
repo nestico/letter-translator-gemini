@@ -4,6 +4,7 @@ import { User, TranslationResult } from '../types';
 import { logActivity } from '../services/activityService';
 import { saveTranslation } from '../services/translationService';
 import { jsPDF } from 'jspdf';
+import { registerFontsForLanguage } from '../services/pdfFontService';
 
 import { compressImage } from '../services/imageUtils';
 
@@ -251,6 +252,9 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
             pdfDoc.text("Letter Translation", margin, y);
             y += 12;
 
+            // PREPARE FONTS FOR CONTENT
+            await registerFontsForLanguage(pdfDoc, editedResult.detectedLanguage || '');
+
             if (editedResult.headerInfo) {
                const idToDisplay = exportFileName.trim().replace(/\.[^/.]+$/, "") || 'N/A';
                pdfDoc.setFontSize(10);
@@ -266,26 +270,61 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
             y += 15;
 
             pdfDoc.setFontSize(12);
-            pdfDoc.setFont("helvetica", "normal");
+            pdfDoc.setFont("NotoSans", "normal");
             pdfDoc.setTextColor(30);
 
-            // SANITIZATION: Strip non-Latin characters from translation for PDF
-            // jsPDF default fonts crash/show gibberish with Telugu/Amharic.
-            // We keep only standard English/Latin characters for the PDF version.
-            const safeTranslation = editedResult.translation
-               .replace(/[^\x00-\x7F\xA0-\xFF]/g, '') // Keep ASCII and extended Latin
+            // Use the full translation without sanitization
+            const translationText = (editedResult.translation || '')
                .trim()
                .replace(/\n{3,}/g, '\n\n');
 
-            const splitText = pdfDoc.splitTextToSize(safeTranslation, contentWidth);
+            const splitTranslation = pdfDoc.splitTextToSize(translationText, contentWidth);
 
-            splitText.forEach((line: string) => {
+            splitTranslation.forEach((line: string) => {
                if (y > pageHeight - 30) {
                   pdfDoc.addPage();
                   y = 20;
                }
                pdfDoc.text(line, margin, y);
                y += 7;
+            });
+
+            // 3. ADD TRANSCRIPTION
+            y += 15;
+            if (y > pageHeight - 40) {
+               pdfDoc.addPage();
+               y = 20;
+            }
+
+            pdfDoc.setFont("helvetica", "bold");
+            pdfDoc.setFontSize(14);
+            pdfDoc.text("Original Transcription", margin, y);
+            y += 10;
+
+            // Switch to script-specific font for transcription
+            let scriptFont = "NotoSans";
+            const detectedLang = (editedResult.detectedLanguage || '').toLowerCase();
+            if (detectedLang.includes('tamil')) scriptFont = "NotoSansTamil";
+            else if (detectedLang.includes('telugu')) scriptFont = "NotoSansTelugu";
+            else if (detectedLang.includes('amharic')) scriptFont = "NotoSansEthiopic";
+
+            pdfDoc.setFont(scriptFont, "normal");
+            pdfDoc.setFontSize(11);
+            pdfDoc.setTextColor(50);
+
+            const transcriptionText = (editedResult.transcription || '')
+               .trim()
+               .replace(/\n{3,}/g, '\n\n');
+
+            const splitTranscription = pdfDoc.splitTextToSize(transcriptionText, contentWidth);
+
+            splitTranscription.forEach((line: string) => {
+               if (y > pageHeight - 20) {
+                  pdfDoc.addPage();
+                  y = 20;
+               }
+               pdfDoc.text(line, margin, y);
+               y += 6;
             });
 
             // "Below translation" ID Reference

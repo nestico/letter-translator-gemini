@@ -12,6 +12,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ user, onBack }) => {
     const [history, setHistory] = useState<TranslationRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedRecord, setSelectedRecord] = useState<TranslationRecord | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         loadHistory();
@@ -53,6 +54,16 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ user, onBack }) => {
         }
     };
 
+    const filteredHistory = history.filter(item => {
+        const searchLow = searchTerm.toLowerCase();
+        return (
+            item.file_name?.toLowerCase().includes(searchLow) ||
+            item.source_language?.toLowerCase().includes(searchLow) ||
+            (item.header_info as any)?.childName?.toLowerCase().includes(searchLow) ||
+            (item.header_info as any)?.childId?.toLowerCase().includes(searchLow)
+        );
+    });
+
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString(undefined, {
             year: 'numeric',
@@ -65,16 +76,29 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ user, onBack }) => {
 
     return (
         <div className="w-full max-w-[1280px] px-4 lg:px-10 py-8 flex flex-col gap-6 min-h-[calc(100vh-64px)]">
-            <div className="flex items-center gap-4">
-                <button
-                    onClick={onBack}
-                    className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                >
-                    <span className="material-symbols-outlined text-slate-600 dark:text-slate-300">arrow_back</span>
-                </button>
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white">History</h1>
-                    <p className="text-slate-500 dark:text-slate-400">Your past translations.</p>
+            <div className="flex flex-col md:flex-row md:items-center gap-4">
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={onBack}
+                        className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    >
+                        <span className="material-symbols-outlined text-slate-600 dark:text-slate-300">arrow_back</span>
+                    </button>
+                    <div>
+                        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">History</h1>
+                        <p className="text-slate-500 dark:text-slate-400">Your past translations.</p>
+                    </div>
+                </div>
+
+                <div className="md:ml-auto w-full max-w-sm relative">
+                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+                    <input
+                        type="text"
+                        placeholder="Search ID, Name or Language..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-sm"
+                    />
                 </div>
             </div>
 
@@ -82,17 +106,17 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ user, onBack }) => {
                 <div className="flex items-center justify-center h-64">
                     <div className="animate-spin w-10 h-10 border-4 border-primary border-t-transparent rounded-full"></div>
                 </div>
-            ) : history.length === 0 ? (
+            ) : filteredHistory.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-64 text-center">
-                    <span className="material-symbols-outlined text-6xl text-slate-200 dark:text-slate-700 mb-4">history_toggle_off</span>
-                    <p className="text-lg text-slate-400 mb-6">No translations found.</p>
-                    <button
-                        onClick={loadHistory}
-                        className="flex items-center gap-2 px-6 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-sm"
-                    >
-                        <span className="material-symbols-outlined text-[18px]">refresh</span>
-                        Refresh History
-                    </button>
+                    <span className="material-symbols-outlined text-6xl text-slate-200 dark:text-slate-700 mb-4">{searchTerm ? 'search_off' : 'history_toggle_off'}</span>
+                    <p className="text-lg text-slate-400 mb-2">{searchTerm ? `No matches found for "${searchTerm}"` : 'No translations found.'}</p>
+                    {searchTerm ? (
+                        <button onClick={() => setSearchTerm('')} className="text-primary font-bold hover:underline">Clear Search</button>
+                    ) : (
+                        <button onClick={loadHistory} className="flex items-center gap-2 px-6 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-sm">
+                            <span className="material-symbols-outlined text-[18px]">refresh</span> Refresh History
+                        </button>
+                    )}
                 </div>
             ) : (
                 <div className="bg-white dark:bg-card-dark rounded-xl border border-slate-200 dark:border-border-dark overflow-hidden shadow-sm">
@@ -100,43 +124,46 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ user, onBack }) => {
                         <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
                             <tr>
                                 <th className="px-6 py-4 text-sm font-bold text-slate-700 dark:text-slate-300 w-12"></th>
-                                <th className="px-6 py-4 text-sm font-bold text-slate-700 dark:text-slate-300">File Name</th>
-                                <th className="px-6 py-4 text-sm font-bold text-slate-700 dark:text-slate-300">Languages</th>
+                                <th className="px-6 py-4 text-sm font-bold text-slate-700 dark:text-slate-300">Beneficiary</th>
+                                <th className="px-6 py-4 text-sm font-bold text-slate-700 dark:text-slate-300">Language</th>
                                 <th className="px-6 py-4 text-sm font-bold text-slate-700 dark:text-slate-300">Date</th>
                                 <th className="px-6 py-4 text-sm font-bold text-slate-700 dark:text-slate-300 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {history.map((item) => (
-                                <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                            {filteredHistory.map((record) => (
+                                <tr key={record.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
                                     <td className="px-6 py-4">
                                         <button
-                                            onClick={() => handleToggleGolden(item.id, item.is_golden || false)}
-                                            className={`transition-all duration-200 ${item.is_golden ? 'text-yellow-500 scale-110' : 'text-slate-200 dark:text-slate-700 hover:text-slate-400'}`}
-                                            title={item.is_golden ? "Unmark as Golden" : "Mark as Golden Reference"}
+                                            onClick={() => handleToggleGolden(record.id, record.is_golden || false)}
+                                            className={`transition-all duration-200 ${record.is_golden ? 'text-yellow-500 scale-110' : 'text-slate-200 dark:text-slate-700 hover:text-slate-400'}`}
+                                            title={record.is_golden ? "Unmark as Golden" : "Mark as Golden Reference"}
                                         >
                                             <span className="material-symbols-outlined fill-current">
-                                                {item.is_golden ? 'star' : 'star_border'}
+                                                {record.is_golden ? 'star' : 'star_border'}
                                             </span>
                                         </button>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <div className="font-medium text-slate-900 dark:text-white">{item.file_name}</div>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{(record.header_info as any)?.childName || 'N/A'}</span>
+                                            <span className="text-[10px] text-slate-400 uppercase tracking-tight">{(record.header_info as any)?.childId || record.file_name}</span>
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className="inline-flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                                            {item.source_language} <span className="material-symbols-outlined text-xs text-slate-400">arrow_forward</span> {item.target_language}
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
+                                            {record.source_language}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
-                                        {formatDate(item.created_at)}
+                                        {formatDate(record.created_at)}
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <button
-                                            onClick={() => setSelectedRecord(item)}
-                                            className="text-primary hover:text-blue-700 dark:hover:text-blue-400 font-medium text-sm"
+                                            onClick={() => setSelectedRecord(record)}
+                                            className="px-4 py-1.5 text-xs font-bold text-white bg-primary rounded-lg hover:bg-primary/90 transition-all shadow-sm"
                                         >
-                                            View
+                                            View Details
                                         </button>
                                     </td>
                                 </tr>
@@ -149,7 +176,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ user, onBack }) => {
             {/* View Detail Modal */}
             {selectedRecord && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-card-dark w-full max-w-4xl h-[80vh] rounded-2xl overflow-hidden flex flex-col shadow-2xl">
+                    <div className="bg-white dark:bg-card-dark w-full max-w-4xl h-[80vh] rounded-2xl overflow-hidden shadow-2xl flex flex-col">
                         <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
                             <div className="flex items-center gap-3">
                                 <button
@@ -162,12 +189,12 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ user, onBack }) => {
                                 </button>
                                 <div>
                                     <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                        {selectedRecord.file_name}
+                                        {(selectedRecord.header_info as any)?.childName || selectedRecord.file_name}
                                         {selectedRecord.is_golden && (
                                             <span className="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full uppercase font-bold tracking-wider">Golden Reference</span>
                                         )}
                                     </h3>
-                                    <span className="text-sm text-slate-500">{formatDate(selectedRecord.created_at)}</span>
+                                    <span className="text-sm text-slate-500 tracking-tight">{(selectedRecord.header_info as any)?.childId ? `Child ID: ${(selectedRecord.header_info as any).childId} | ` : ''}{formatDate(selectedRecord.created_at)}</span>
                                 </div>
                             </div>
                             <button
