@@ -291,43 +291,6 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                y += 7;
             });
 
-            // 3. ADD TRANSCRIPTION
-            y += 15;
-            if (y > pageHeight - 40) {
-               pdfDoc.addPage();
-               y = 20;
-            }
-
-            pdfDoc.setFont("helvetica", "bold");
-            pdfDoc.setFontSize(14);
-            pdfDoc.text("Original Transcription", margin, y);
-            y += 10;
-
-            // Switch to script-specific font for transcription
-            let scriptFont = "NotoSans";
-            const detectedLang = (editedResult.detectedLanguage || '').toLowerCase();
-            if (detectedLang.includes('tamil')) scriptFont = "NotoSansTamil";
-            else if (detectedLang.includes('telugu')) scriptFont = "NotoSansTelugu";
-            else if (detectedLang.includes('amharic')) scriptFont = "NotoSansEthiopic";
-
-            pdfDoc.setFont(scriptFont, "normal");
-            pdfDoc.setFontSize(11);
-            pdfDoc.setTextColor(50);
-
-            const transcriptionText = (editedResult.transcription || '')
-               .trim()
-               .replace(/\n{3,}/g, '\n\n');
-
-            const splitTranscription = pdfDoc.splitTextToSize(transcriptionText, contentWidth);
-
-            splitTranscription.forEach((line: string) => {
-               if (y > pageHeight - 20) {
-                  pdfDoc.addPage();
-                  y = 20;
-               }
-               pdfDoc.text(line, margin, y);
-               y += 6;
-            });
 
             // "Below translation" ID Reference
             y += 10;
