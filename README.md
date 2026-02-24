@@ -8,7 +8,8 @@
 
 ## Key Features
 - **AI-Powered Deciphering**: Uses **Google Gemini 2.0 Flash** to accurately transcribe cursive and aged handwriting with high fidelity.
-- **Multi-Language Support**: Auto-detects source language (Amharic, Telugu, Spanish, etc.) and translates to clear, modern English.
+- **Multi-Language Support**: Auto-detects source language (Amharic, Tigrigna, Afan Oromo, Telugu, Tamil, Spanish, etc.) and translates to clear, modern English.
+- **Golden Reference Learning**: Leverages verified "Ground Truth" data for high-accuracy few-shot translation of complex humanitarian content.
 - **Smart Image Processing**: 
   - Upload images (PNG, JPG) or PDF documents.
   - Built-in rotation tools to correct scanned orientation.

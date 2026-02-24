@@ -340,9 +340,39 @@
 
 ---
 
-## Current State & Next Steps (Monday)
-- **Status**: The application is **Working Fine** and stable in Production. Branding is finalized, and history loading is resilient.
-- **Next Steps (Next Monday)**:
-    - **PDF Multi-Font Support**: Integrate Noto Sans to support original script (Telugu/Amharic) in PDF exports.
-    - **Universal History Search**: Add filtering by Child ID and Date.
-    - **Admin Analytics**: Build a summary view for the `activity` logs.
+## Current State & Next Steps (Tuesday)
+- **Status**: **FEATURE COMPLETE & SECURE**. The application now features Role-Based Access Control and a self-improving AI model.
+- **Next Steps**:
+    - Monitor "Golden Reference" impact on translation confidence scores.
+    - Expand the authorized Admin list as needed.
+
+# Session Notes - Feb 24, 2026
+
+### 30. Admin Security & RBAC (Role-Based Access Control)
+- **Objective**: Protect sensitive organizational analytics from unauthorized staff access.
+- **Implementation**:
+    - **Authorized List**: Created a central `ADMIN_EMAILS` registry (Primary Admin: `nestico@childrenbelieve.ca`).
+    - **UI Protection**: The "Analytics" tab is now conditionally rendered, appearing only for users with the `isAdmin` flag.
+    - **Routing Security**: Added client-side authorization checks to the `AnalyticsView` component.
+
+### 31. Staff Productivity Analytics & User Attribution
+- **Objective**: Transition from low-level logs to meaningful management summaries.
+- **Implementation**:
+    - **Activity summary**: Refactored the dashboard to show a "User Activity Summary (Last 30 Days)".
+    - **Staff Attribution**: Updated all platform actions (Translation, PDF Export, Login) to capture and link the staff member's email address.
+    - **Impact Visualization**: Added an "Impact Score" progress bar to identify the most active translation contributors globally.
+
+### 32. Multi-Language Expansion: Tigrigna Support
+- **Objective**: Enable high-fidelity humanitarian translation for the Tigray region.
+- **Implementation**:
+    - **UI**: Added `(ETH) Tigrigna` to the source language selector.
+    - **AI Persona**: Developed a specialized "Tigrigna Language Expert" profile for the Gemini engine.
+    - **Sensitive Context Handling**: Tuned the AI to accurately translate mentions of war recovery, prosthetics (artificial legs), and family displacement with 100% literal fidelity.
+
+### 33. Large-Scale "Golden Reference" Dataset Ingestion
+- **Objective**: Improve AI accuracy for complex scripts using 26 new professional human-verified translation pairs.
+- **Implementation**:
+    - **Truth Ingestion**: Developed an automated ESM import script (`import_truth.js`) to parse and upload expert transcriptions/translations.
+    - **Few-Shot Learning**: Integrated these examples into the dynamic prompt system. The AI now "sees" real Tigrigna, Amharic, Tamil, and Telugu examples before processing every new letter.
+    - **Validation**: Verified deep cultural anchors for Indian languages (CLC centers, Nutrition Kits) are correctly prioritized by the model.
+

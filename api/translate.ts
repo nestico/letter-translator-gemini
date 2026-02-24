@@ -8,7 +8,7 @@ const LANGUAGE_SPECIFIC_RULES = {
     },
     "Tamil": {
         role: "Tamil Cultural Linguist",
-        special_instructions: "Identify mentions of local committees like CFAM (Child Friendly Accountability Mechanism) and VDC (Village Development Committee). Look for festivals like Diwali, Vinayagar Chaturthi (processions with drums), and Children's Day (cake cutting). Distinguish between the child and mother's participation in community events organized by IRCDS.",
+        special_instructions: "Identify mentions of local committees like CFAM (Child Friendly Accountability Mechanism) and VDC (Village Development Committee). Look for festivals like Diwali, Vinayagar Chaturthi (processions with drums), and Children's Day (cake cutting). Recognize 'CLC (Creative Learning Centre)' and 'Nutrition Kits'. Identify mentions of speeches about Dr. Abdul Kalam. Distinguish between the child and mother's participation in community events organized by IRCDS.",
         negative_constraints: []
     },
     "Amharic": {
@@ -20,6 +20,11 @@ const LANGUAGE_SPECIFIC_RULES = {
         role: "Oromo Language Specialist",
         special_instructions: "Recognize mentions of 'Teff/Xaafi' and specific food supplies provided by gift money. Identify mentions of wise spending on clothes and family discussions. Ensure the narrative flows as a direct communication between child and sponsor.",
         negative_constraints: []
+    },
+    "Tigrigna": {
+        role: "Tigrigna Language Expert",
+        special_instructions: "100% LITERAL FIDELITY. Recognize mentions of 'Injera' and specific cultural markers. Pay special attention to sensitive contexts regarding war recovery, mentions of artificial legs (prosthetics), and medical follow-ups. Ensure the emotional tone of family loss or resilience is preserved exactly as written.",
+        negative_constraints: ["Do not summarize", "Do not soften hard realities", "Do not invent generic hope if not present"]
     },
     "Spanish": {
         role: "Latin American Spanish Specialist",
