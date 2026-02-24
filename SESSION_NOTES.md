@@ -351,8 +351,8 @@
 ### 30. Admin Security & RBAC (Role-Based Access Control)
 - **Objective**: Protect sensitive organizational analytics from unauthorized staff access.
 - **Implementation**:
-    - **Authorized List**: Created a central `ADMIN_EMAILS` registry (Primary Admin: `nestico@childrenbelieve.ca`).
-    - **UI Protection**: The "Analytics" tab is now conditionally rendered, appearing only for users with the `isAdmin` flag.
+    - **Authorized List**: Expanded the central `ADMIN_EMAILS` registry to include **ehernandez@childrenbelieve.ca** alongside the primary administrator.
+    - **UI Protection**: The "Analytics" tab is now conditionally rendered, appearing only for members of this authorized Admin Group.
     - **Routing Security**: Added client-side authorization checks to the `AnalyticsView` component.
 
 ### 31. Staff Productivity Analytics & User Attribution

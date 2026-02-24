@@ -42,7 +42,7 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
    }, [user]);
 
    const LANGUAGES = [
-      'Auto-Detect', '(nic) spanish', '(BFA) French', '(CAN) English', '(Ind) Telugu', '(ind) Tamil', '(ETH) Amharic', '(ETH) Afan Oromo', '(ETH) Tigrigna', '(HND) Spanish', '(PRY) Spanish', 'German', 'Italian', '(BRA) Portuguese', 'Latin', 'Dutch', 'Russian', 'Chinese', 'Japanese'
+      'Auto-Detect', '(NIC) spanish', '(BFA) French', '(CAN) English', '(IND) Telugu', '(IND) Tamil', '(ETH) Amharic', '(ETH) Afan Oromo', '(ETH) Tigrigna', '(HND) Spanish', '(PRY) Spanish', 'German', 'Italian', '(BRA) Portuguese', 'Latin', 'Dutch', 'Russian', 'Chinese', 'Japanese'
    ];
 
    const handleProcessStart = () => {

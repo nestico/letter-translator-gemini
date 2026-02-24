@@ -19,7 +19,7 @@ console.log("App Module Loading...");
 // List of unauthorized emails that should NOT see analytics
 const ADMIN_EMAILS = [
   'nestico@childrenbelieve.ca', // Primary Admin
-  // Add other admin emails here as decided
+  'ehernandez@childrenbelieve.ca', // Admin Group Member
 ];
 
 function App() {
