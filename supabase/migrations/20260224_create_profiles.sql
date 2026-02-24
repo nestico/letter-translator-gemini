@@ -1,10 +1,18 @@
--- Create a table for user profiles
+-- Create the table if it truly doesn't exist
 CREATE TABLE IF NOT EXISTS public.profiles (
   id uuid REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
   email text UNIQUE NOT NULL,
   role text DEFAULT 'staff' CHECK (role IN ('staff', 'admin')),
-  updated_at timestamp with time zone DEFAULT now()
+  created_at timestamp with time zone DEFAULT now()
 );
+
+-- If the table exists but is missing the 'role' column, add it
+DO $$ 
+BEGIN 
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='role') THEN
+    ALTER TABLE public.profiles ADD COLUMN role text DEFAULT 'staff' CHECK (role IN ('staff', 'admin'));
+  END IF;
+END $$;
 
 -- Enable RLS
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
