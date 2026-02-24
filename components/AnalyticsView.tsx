@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { User, ActivityRecord } from '../types';
 import { getAllTranslations } from '../services/translationService';
 import { getGlobalActivity } from '../services/activityService';
+import { supabase } from '../services/supabase';
 
 interface AnalyticsViewProps {
     user: User;
@@ -108,11 +109,24 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onBack }) =>
                 }
             });
 
+            // Fetch Profiles to map IDs to Names/Emails
+            const { data: profiles } = await supabase
+                .from('profiles')
+                .select('id, email, full_name');
+
+            const profileMap: Record<string, { email: string, name: string }> = {};
+            profiles?.forEach(p => {
+                profileMap[p.id] = { email: p.email, name: p.full_name };
+            });
+
             // Mapping for display
-            const userActivities = Object.entries(userUploadMap).map(([id, data]) => ({
-                email: data.email || `Staff: ${id.split('-')[0]}...`,
-                uploadCount: data.count
-            })).sort((a, b) => b.uploadCount - a.uploadCount);
+            const userActivities = Object.entries(userUploadMap).map(([id, data]) => {
+                const profile = profileMap[id];
+                return {
+                    email: profile?.name || profile?.email || data.email || `Staff: ${id.split('-')[0]}...`,
+                    uploadCount: data.count
+                };
+            }).sort((a, b) => b.uploadCount - a.uploadCount);
 
             setStats({
                 totalLetters,
