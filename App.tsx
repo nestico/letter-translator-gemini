@@ -42,14 +42,22 @@ function App() {
     // Check active session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        const isAdmin = await fetchUserRole(session.user.id);
-        setUser({
+        // Set user immediately
+        const initialUser: User = {
           id: session.user.id,
           email: session.user.email!,
           name: session.user.user_metadata.full_name || session.user.email!.split('@')[0],
-          isAdmin: isAdmin,
+          isAdmin: false,
+        };
+        setUser(initialUser);
+        setAuthModalOpen(false);
+
+        // Fetch admin status in background
+        fetchUserRole(session.user.id).then(isAdmin => {
+          if (isAdmin) {
+            setUser(prev => prev ? { ...prev, isAdmin } : null);
+          }
         });
-        setAuthModalOpen(false); // Close modal if already logged in
       }
     });
 
@@ -58,21 +66,25 @@ function App() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
-        const isAdmin = await fetchUserRole(session.user.id);
+        // Set basic user info immediately
         const newUser: User = {
           id: session.user.id,
           email: session.user.email!,
           name: session.user.user_metadata.full_name || session.user.email!.split('@')[0],
-          isAdmin: isAdmin,
+          isAdmin: false,
         };
         setUser(newUser);
-        // Log login activity (optional debouncing could be good but keeping simple)
+
         if (_event === 'SIGNED_IN') {
           logActivity(session.user.id, 'LOGIN', { email: session.user.email, method: 'email' }).catch(console.error);
-          // Auto-close modal and stay on home page
           setAuthModalOpen(false);
-          // Note: Removing the setAppState(AppState.APP) to keep user on Home Page
-          setAppState(prev => prev);
+
+          // Update role in background
+          fetchUserRole(session.user.id).then(isAdmin => {
+            if (isAdmin) {
+              setUser(prev => prev ? { ...prev, isAdmin } : null);
+            }
+          });
         }
       } else {
         setUser(null);
