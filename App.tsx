@@ -16,26 +16,38 @@ import { logActivity } from './services/activityService';
 
 
 console.log("App Module Loading...");
-// List of unauthorized emails that should NOT see analytics
-const ADMIN_EMAILS = [
-  'nestico@childrenbelieve.ca', // Primary Admin
-  'ehernandez@childrenbelieve.ca', // Admin Group Member
-];
+const fetchUserRole = async (userId: string): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      // Fallback for new users who might not have a profile record yet due to trigger race
+      console.warn("Profile not found or error, defaulting to staff:", error.message);
+      return false;
+    }
+    return data?.role === 'admin';
+  } catch (err) {
+    return false;
+  }
+};
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
 
-  const checkAdmin = (email: string) => ADMIN_EMAILS.includes(email);
-
   useEffect(() => {
     // Check active session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
+        const isAdmin = await fetchUserRole(session.user.id);
         setUser({
           id: session.user.id,
           email: session.user.email!,
           name: session.user.user_metadata.full_name || session.user.email!.split('@')[0],
-          isAdmin: checkAdmin(session.user.email!),
+          isAdmin: isAdmin,
         });
         setAuthModalOpen(false); // Close modal if already logged in
       }
@@ -46,11 +58,12 @@ function App() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
+        const isAdmin = await fetchUserRole(session.user.id);
         const newUser: User = {
           id: session.user.id,
           email: session.user.email!,
           name: session.user.user_metadata.full_name || session.user.email!.split('@')[0],
-          isAdmin: checkAdmin(session.user.email!),
+          isAdmin: isAdmin,
         };
         setUser(newUser);
         // Log login activity (optional debouncing could be good but keeping simple)
