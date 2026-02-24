@@ -369,10 +369,17 @@
     - **AI Persona**: Developed a specialized "Tigrigna Language Expert" profile for the Gemini engine.
     - **Sensitive Context Handling**: Tuned the AI to accurately translate mentions of war recovery, prosthetics (artificial legs), and family displacement with 100% literal fidelity.
 
-### 33. Large-Scale "Golden Reference" Dataset Ingestion
-- **Objective**: Improve AI accuracy for complex scripts using 26 new professional human-verified translation pairs.
+### 34. Database-Managed Administrative Roles (RBAC Migration)
+- **Objective**: Move user management from the codebase to the database for easier organizational scaling.
 - **Implementation**:
-    - **Truth Ingestion**: Developed an automated ESM import script (`import_truth.js`) to parse and upload expert transcriptions/translations.
-    - **Few-Shot Learning**: Integrated these examples into the dynamic prompt system. The AI now "sees" real Tigrigna, Amharic, Tamil, and Telugu examples before processing every new letter.
-    - **Validation**: Verified deep cultural anchors for Indian languages (CLC centers, Nutrition Kits) are correctly prioritized by the model.
+    - **Profiles Table**: Implemented a `public.profiles` table to store `email`, `full_name`, and `role` (`staff` vs. `admin`).
+    - **Automated Triggers**: Added a PostgreSQL trigger to automatically generate a profile record for every new corporate registration.
+    - **Asynchronous Authorization**: Refactored the UI to allow instant login while verifying management permissions in the background, resolving "loading-hang" issues.
+
+### 35. Enhanced Staff Analytics & Attribution
+- **Objective**: Improve management oversight by resolving anonymous IDs to actual staff identities.
+- **Implementation**:
+    - **Identity Resolution**: Updated the Analytics Dashboard to map activity logs to professional profiles, correctly attributing impact to names like "Ernesto Hernandez".
+    - **Admin-Specific RLS**: Added specialized Row Level Security policies allowing the Admin Group to view global profiles while maintaining privacy for standard staff.
+    - **Impact Visualization**: Continued refinement of the "Impact Score" to celebrate the most active contributors across regional teams.
 
