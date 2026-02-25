@@ -25,7 +25,7 @@ export const TermsView: React.FC<LegalViewProps> = ({ onBack }) => {
 
                 <div className="prose prose-slate dark:prose-invert max-w-none">
                     <p className="text-lg text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">
-                        By using the Letter Translator Gemini, you agree to comply with the following terms and the broader organizational policies of Children Believe.
+                        By using the Letter Translator, you agree to comply with the following terms and the broader organizational policies of Children Believe.
                     </p>
 
                     <section className="mb-10">
@@ -50,9 +50,9 @@ export const TermsView: React.FC<LegalViewProps> = ({ onBack }) => {
                     </section>
 
                     <section className="mb-10">
-                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">4. Intellectual Property</h2>
+                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">4. Data & Content Ownership</h2>
                         <p className="text-slate-600 dark:text-slate-400 mb-4">
-                            All materials, designs, and content within this application are the property of Children Believe or its technology partners. You may not reproduce, redistribute, or use these materials outside of authorized organizational workflows.
+                            All sponsorship letters and data processed through this application remain the property of Children Believe. Users are granted a limited license to use this platform for authorized organizational purposes. This platform is provided "as is" to facilitate regional operations.
                         </p>
                     </section>
 

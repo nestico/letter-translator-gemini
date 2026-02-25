@@ -25,7 +25,7 @@ export const PrivacyView: React.FC<LegalViewProps> = ({ onBack }) => {
 
                 <div className="prose prose-slate dark:prose-invert max-w-none">
                     <p className="text-lg text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">
-                        At Children Believe, your privacy and the protection of sensitive information are our highest priorities. This Privacy Policy outlines how the Letter Translator Gemini application handles data.
+                        At Children Believe, your privacy and the protection of sensitive information are our highest priorities. This Privacy Policy outlines how the Letter Translator application handles data.
                     </p>
 
                     <section className="mb-10">
