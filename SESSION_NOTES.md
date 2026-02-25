@@ -385,10 +385,28 @@
 
 # Session Notes - Feb 25, 2026
 
+### 36. Product Governance & PRD Initialization
+- **Objective**: Formalize the project's strategic roadmap and technical requirements.
+- **Implementation**: Created `PRD.md` to document executive goals, target audience, technical architecture, and success metrics for 2026.
+
+### 37. Regional Operations Support (Phase 1)
+- **Objective**: Enable staff categorization by regional field offices.
+- **Implementation**: 
+    - **Schema Upgrade**: Added `region` column to Supabase `profiles`.
+    - **Dashboard Integration**: Updated Analytics UI to display regional office data in the staff activity summary.
+    - **Automated Sync**: Refactored `App.tsx` to handle background profile fetching during authentication.
+
+### 38. Infrastructure Stabilization (Supabase CLI)
+- **Objective**: Resolve environment bottlenecks for database migrations.
+- **Implementation**: Successfully authenticated and linked the project via `npx supabase`, repairting the migration history and enabling a 1-click `db push` workflow.
+
+### 39. AI Engine Upgrade (Gemini 3.1 Lifecycle)
+- **Objective**: Prevent service disruption from the June 2026 Gemini 2.0 shutdown.
+- **Implementation**: Upgraded core translation handler to `gemini-3.1-flash`, improving both reasoning capability and long-term stability.
+
 ### Pending Work & Objectives:
-1. **Product Requirements Document (PRD)**: Create and maintain a comprehensive PRD to formalize feature requirements, user personas, and technical constraints.
-2. **AI Model Maintenance**: Review and potentially upgrade the current `gemini-2.0-flash` model before its decommissioning cycle.
-3. **Regional Attribution**: Add regional office fields to user profiles for localized analytics.
-4. **Tigrigna Accuracy Audit**: Verify literal fidelity of Tigrayan translations using the new Golden Reference dataset.
-5. **Supabase CLI Investigation**: Resolve local environment issues for smoother database migrations.
+1. **Tigrigna Accuracy Audit**: Verify literal fidelity of Tigrayan translations using the new Golden Reference dataset.
+2. **Staff Region Population**: Manually assign regions to existing staff in the Supabase Table Editor.
+3. **Smart Toggle Roadmap**: Monitor production costs for 30 days before implementing the Flash/Pro dynamic cost-optimization toggle.
+4. **Bulk Processing Pipeline**: Explore requirements for multi-letter batch uploads.
 

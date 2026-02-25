@@ -1,7 +1,7 @@
 # Product Requirements Document (PRD): Letter Translator Gemini
 
 ## 1. Executive Summary
-**Letter Translator Gemini** is a specialized, AI-powered platform designed for **Children Believe** to facilitate the accurate and culturally sensitive translation of handwritten child sponsorship letters. By leveraging Google's Gemini 2.0 Multimodal models, the platform bridges the communication gap between children in regional programs (Ethiopia, India, Nicaragua, etc.) and their international sponsors.
+**Letter Translator Gemini** is a specialized, AI-powered platform designed for **Children Believe** to facilitate the accurate and culturally sensitive translation of handwritten child sponsorship letters. By leveraging Google's Gemini 3.1 Multimodal models, the platform bridges the communication gap between children in regional programs (Ethiopia, India, Nicaragua, etc.) and their international sponsors.
 
 ## 2. Target Audience
 *   **Regional Program Staff (Staff Group)**: Field workers and office staff who process incoming handwritten letters.
@@ -35,7 +35,7 @@
 *   **Frontend**: React (Vite) with a premium, responsive design system.
 *   **Backend/API**: Vercel Serverless Functions (Node.js/TypeScript).
 *   **Database & Auth**: Supabase (PostgreSQL with RLS, Supabase Auth).
-*   **AI Engine**: Google Gemini 2.0 Flash (Multimodal).
+*   **AI Engine**: Google Gemini 3.1 Flash (Multimodal).
 *   **OCR (Fallback/Primary)**: Azure Computer Vision (as needed for standard scripts).
 
 ## 5. Success Metrics
@@ -49,3 +49,4 @@
 *   **Bulk Processing**: Uploading entire batches of letters for automated queue processing.
 *   **Linguistic Feedback Loop**: In-app interface for admins to correct AI output and immediately convert it to a new "Golden Reference."
 *   **Model Lifecycle Management**: Automated checks and upgrades for Gemini model versions to prevent service disruption.
+*   **Smart Model Toggle**: Cost-optimization system to dynamically switch between Flash and Pro models based on linguistic complexity.
