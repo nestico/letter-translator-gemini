@@ -125,25 +125,22 @@ function App() {
 
   const handleSignOut = async () => {
     try {
-      console.log("Signing out user...");
-      if (user) {
-        logActivity(user.id, 'LOGOUT').catch(e => console.error("Logout log fail:", e));
-      }
+      console.log("Starting sign out workflow...");
 
-      // 1. Reset React State immediately
+      // 1. Tell Supabase to end session officially
+      await supabase.auth.signOut();
+
+      // 2. Clear application state
       setUser(null);
       setAppState(AppState.LANDING);
 
-      // 2. Force Clear Browser Persistence (The "Nuclear Option")
-      localStorage.clear();
+      // 3. Clear transient storage (but avoid nuking everything that might break the client)
       sessionStorage.clear();
-
-      // 3. Inform Supabase (Fire and Forget)
-      await supabase.auth.signOut();
 
       console.log("Sign out completed successfully.");
     } catch (err) {
       console.error("Sign out error:", err);
+      // Fallback reset
       setUser(null);
       setAppState(AppState.LANDING);
     }

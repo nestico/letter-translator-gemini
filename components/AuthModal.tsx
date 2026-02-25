@@ -15,6 +15,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Reset state whenever modal is opened or closed
+  React.useEffect(() => {
+    if (!isOpen) {
+      setEmail('');
+      setPassword('');
+      setError(null);
+      setIsLoading(false);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
