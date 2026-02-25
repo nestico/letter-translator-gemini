@@ -8,6 +8,9 @@ import { TranslationView } from './components/TranslationView';
 import { UploadView } from './components/UploadView';
 import { HistoryView } from './components/HistoryView';
 import { AnalyticsView } from './components/AnalyticsView';
+import { PrivacyView } from './components/PrivacyView';
+import { TermsView } from './components/TermsView';
+import { SupportView } from './components/SupportView';
 
 import { ChatBot } from './components/ChatBot';
 import { User, AppState } from './types';
@@ -222,10 +225,26 @@ function App() {
             onBack={() => setAppState(AppState.LANDING)}
           />
         )}
+
+        {appState === AppState.PRIVACY && (
+          <PrivacyView onBack={() => setAppState(AppState.LANDING)} />
+        )}
+
+        {appState === AppState.TERMS && (
+          <TermsView onBack={() => setAppState(AppState.LANDING)} />
+        )}
+
+        {appState === AppState.SUPPORT && (
+          <SupportView onBack={() => setAppState(AppState.LANDING)} />
+        )}
       </main>
 
       {/* Persistent Components */}
-      <Footer />
+      <Footer
+        onNavigatePrivacy={() => setAppState(AppState.PRIVACY)}
+        onNavigateTerms={() => setAppState(AppState.TERMS)}
+        onNavigateSupport={() => setAppState(AppState.SUPPORT)}
+      />
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setAuthModalOpen(false)}

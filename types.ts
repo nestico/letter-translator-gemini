@@ -26,7 +26,10 @@ export enum AppState {
   LANDING = 'LANDING',
   APP = 'APP',
   HISTORY = 'HISTORY',
-  ANALYTICS = 'ANALYTICS'
+  ANALYTICS = 'ANALYTICS',
+  PRIVACY = 'PRIVACY',
+  TERMS = 'TERMS',
+  SUPPORT = 'SUPPORT'
 }
 
 export interface AuthState {
