@@ -11,6 +11,7 @@ import { AnalyticsView } from './components/AnalyticsView';
 import { PrivacyView } from './components/PrivacyView';
 import { TermsView } from './components/TermsView';
 import { SupportView } from './components/SupportView';
+import { PasswordResetModal } from './components/PasswordResetModal';
 
 import { ChatBot } from './components/ChatBot';
 import { User, AppState } from './types';
@@ -42,6 +43,7 @@ const fetchUserProfile = async (userId: string): Promise<{ isAdmin: boolean, reg
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
+  const [isResetModalOpen, setResetModalOpen] = useState(false);
 
   useEffect(() => {
     // Check active session
@@ -90,6 +92,11 @@ function App() {
               setUser(prev => prev ? { ...prev, isAdmin: profile.isAdmin, region: profile.region } : null);
             }
           });
+        }
+
+        if (_event === 'PASSWORD_RECOVERY') {
+          console.log("Password recovery event detected!");
+          setResetModalOpen(true);
         }
       } else {
         setUser(null);
@@ -247,10 +254,10 @@ function App() {
         onClose={() => setAuthModalOpen(false)}
         onLogin={handleLogin}
       />
-      {/* Only show chatbot when authenticated/in-app or if desired on landing too. 
-          Prompt says "AI powered chatbot", usually for support or help. 
-          Let's enable it always or just in APP. Usually simpler to just have it always available for support. 
-      */}
+      <PasswordResetModal
+        isOpen={isResetModalOpen}
+        onClose={() => setResetModalOpen(false)}
+      />
       <ChatBot />
     </div>
   );
