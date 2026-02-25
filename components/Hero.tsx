@@ -2,9 +2,10 @@ import React from 'react';
 
 interface HeroProps {
   onStartTranslation: () => void;
+  onViewDemo: () => void;
 }
 
-export const Hero: React.FC<HeroProps> = ({ onStartTranslation }) => {
+export const Hero: React.FC<HeroProps> = ({ onStartTranslation, onViewDemo }) => {
   return (
     <section className="w-full py-12 lg:py-20 @container">
       <div className="flex flex-col-reverse lg:flex-row gap-12 items-center">
@@ -31,7 +32,10 @@ export const Hero: React.FC<HeroProps> = ({ onStartTranslation }) => {
               <span className="material-symbols-outlined mr-2 text-[20px]">upload_file</span>
               Start New Translation
             </button>
-            <button className="flex items-center justify-center h-12 px-6 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-base font-medium transition-colors">
+            <button
+              onClick={onViewDemo}
+              className="flex items-center justify-center h-12 px-6 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-base font-medium transition-colors"
+            >
               View Demo
             </button>
           </div>

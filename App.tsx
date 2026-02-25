@@ -108,6 +108,7 @@ function App() {
 
   const [appState, setAppState] = useState<AppState>(AppState.LANDING);
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
+  const [isDemoModalOpen, setDemoModalOpen] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<{ url: string; file: File }[] | null>(null);
 
 
@@ -168,7 +169,10 @@ function App() {
       <main className="flex-1 w-full flex flex-col items-center">
         {appState === AppState.LANDING && (
           <div className="w-full max-w-[1280px] px-4 lg:px-10 flex flex-col gap-16 pb-20">
-            <Hero onStartTranslation={handleStartAction} />
+            <Hero
+              onStartTranslation={handleStartAction}
+              onViewDemo={() => setDemoModalOpen(true)}
+            />
             <Features />
 
             {/* CTA Section */}
@@ -258,6 +262,35 @@ function App() {
         isOpen={isResetModalOpen}
         onClose={() => setResetModalOpen(false)}
       />
+
+      {/* Demo Video Modal */}
+      {isDemoModalOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setDemoModalOpen(false)}></div>
+          <div className="relative w-full max-w-5xl aspect-video bg-black rounded-2xl shadow-2xl overflow-hidden border border-white/10 animate-in fade-in zoom-in duration-300">
+            <button
+              onClick={() => setDemoModalOpen(false)}
+              className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/50 text-white hover:bg-white/20 transition-colors"
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+            <div className="w-full h-full flex flex-col items-center justify-center gap-6">
+              <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center text-primary animate-pulse">
+                <span className="material-symbols-outlined text-4xl">play_circle</span>
+              </div>
+              <div className="text-center">
+                <h3 className="text-2xl font-bold text-white mb-2">Application Walkthrough</h3>
+                <p className="text-slate-400">Recording in Progress. Contact Admin for early access.</p>
+              </div>
+              {/* 
+                  Drop your YouTube embed iframe here:
+                  <iframe width="100%" height="100%" src="https://www.youtube.com/embed/XXXXX" title="Letter Translator Demo" />
+                */}
+            </div>
+          </div>
+        </div>
+      )}
+
       <ChatBot />
     </div>
   );
