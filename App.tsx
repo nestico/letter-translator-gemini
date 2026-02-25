@@ -16,22 +16,24 @@ import { logActivity } from './services/activityService';
 
 
 console.log("App Module Loading...");
-const fetchUserRole = async (userId: string): Promise<boolean> => {
+const fetchUserProfile = async (userId: string): Promise<{ isAdmin: boolean, region: string }> => {
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, region')
       .eq('id', userId)
       .single();
 
     if (error) {
-      // Fallback for new users who might not have a profile record yet due to trigger race
       console.warn("Profile not found or error, defaulting to staff:", error.message);
-      return false;
+      return { isAdmin: false, region: 'Global' };
     }
-    return data?.role === 'admin';
+    return {
+      isAdmin: data?.role === 'admin',
+      region: data?.region || 'Global'
+    };
   } catch (err) {
-    return false;
+    return { isAdmin: false, region: 'Global' };
   }
 };
 
@@ -53,9 +55,9 @@ function App() {
         setAuthModalOpen(false);
 
         // Fetch admin status in background
-        fetchUserRole(session.user.id).then(isAdmin => {
-          if (isAdmin) {
-            setUser(prev => prev ? { ...prev, isAdmin } : null);
+        fetchUserProfile(session.user.id).then(profile => {
+          if (profile.isAdmin || profile.region !== 'Global') {
+            setUser(prev => prev ? { ...prev, isAdmin: profile.isAdmin, region: profile.region } : null);
           }
         });
       }
@@ -80,9 +82,9 @@ function App() {
           setAuthModalOpen(false);
 
           // Update role in background
-          fetchUserRole(session.user.id).then(isAdmin => {
-            if (isAdmin) {
-              setUser(prev => prev ? { ...prev, isAdmin } : null);
+          fetchUserProfile(session.user.id).then(profile => {
+            if (profile.isAdmin || profile.region !== 'Global') {
+              setUser(prev => prev ? { ...prev, isAdmin: profile.isAdmin, region: profile.region } : null);
             }
           });
         }

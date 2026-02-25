@@ -3,6 +3,7 @@ export interface User {
   email: string;
   name: string;
   isAdmin?: boolean;
+  region?: string;
 }
 
 export interface TranslationResult {

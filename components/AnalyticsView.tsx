@@ -11,6 +11,7 @@ interface AnalyticsViewProps {
 
 interface UserActivity {
     email: string;
+    region: string;
     uploadCount: number;
 }
 
@@ -109,14 +110,14 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onBack }) =>
                 }
             });
 
-            // Fetch Profiles to map IDs to Names/Emails
+            // Fetch Profiles to map IDs to Names/Emails/Regions
             const { data: profiles } = await supabase
                 .from('profiles')
-                .select('id, email, full_name');
+                .select('id, email, full_name, region');
 
-            const profileMap: Record<string, { email: string, name: string }> = {};
+            const profileMap: Record<string, { email: string, name: string, region: string }> = {};
             profiles?.forEach(p => {
-                profileMap[p.id] = { email: p.email, name: p.full_name };
+                profileMap[p.id] = { email: p.email, name: p.full_name, region: p.region || 'Global' };
             });
 
             // Mapping for display
@@ -124,6 +125,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onBack }) =>
                 const profile = profileMap[id];
                 return {
                     email: profile?.name || profile?.email || data.email || `Staff: ${id.split('-')[0]}...`,
+                    region: profile?.region || 'Global',
                     uploadCount: data.count
                 };
             }).sort((a, b) => b.uploadCount - a.uploadCount);
@@ -306,7 +308,8 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onBack }) =>
                                 <table className="w-full text-left">
                                     <thead>
                                         <tr className="text-[10px] font-black uppercase text-slate-400 tracking-widest border-b border-slate-50 dark:border-slate-800">
-                                            <th className="py-3 px-4">Staff Member Email</th>
+                                            <th className="py-3 px-4">Staff Member</th>
+                                            <th className="py-3 px-4">Regional Office</th>
                                             <th className="py-3 px-4">Files Uploaded</th>
                                             <th className="py-3 px-4">Impact Score</th>
                                         </tr>
@@ -316,6 +319,11 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onBack }) =>
                                             <tr key={i} className="border-b border-slate-50 dark:border-slate-800/50 hover:bg-slate-50/50 transition-colors">
                                                 <td className="py-4 px-4 font-bold text-slate-700 dark:text-slate-300 text-sm">
                                                     {act.email}
+                                                </td>
+                                                <td className="py-4 px-4">
+                                                    <span className="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] font-black uppercase text-slate-500">
+                                                        {act.region}
+                                                    </span>
                                                 </td>
                                                 <td className="py-4 px-4">
                                                     <div className="flex items-center gap-3">
