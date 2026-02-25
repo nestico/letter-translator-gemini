@@ -383,3 +383,12 @@
     - **Admin-Specific RLS**: Added specialized Row Level Security policies allowing the Admin Group to view global profiles while maintaining privacy for standard staff.
     - **Impact Visualization**: Continued refinement of the "Impact Score" to celebrate the most active contributors across regional teams.
 
+# Session Notes - Feb 25, 2026
+
+### Pending Work & Objectives:
+1. **Product Requirements Document (PRD)**: Create and maintain a comprehensive PRD to formalize feature requirements, user personas, and technical constraints.
+2. **AI Model Maintenance**: Review and potentially upgrade the current `gemini-2.0-flash` model before its decommissioning cycle.
+3. **Regional Attribution**: Add regional office fields to user profiles for localized analytics.
+4. **Tigrigna Accuracy Audit**: Verify literal fidelity of Tigrayan translations using the new Golden Reference dataset.
+5. **Supabase CLI Investigation**: Resolve local environment issues for smoother database migrations.
+
