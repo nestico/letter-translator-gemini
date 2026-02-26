@@ -1,0 +1,317 @@
+commit ac97bdedea3a385602e6894d9f9bf042508bf21c
+Author: ehernandez <ehernandez@childrenbelieve.ca>
+Date:   Wed Feb 25 14:01:13 2026 -0500
+
+    fix: correctly restore gemini-2.0-flash as the stable model
+
+diff --git a/api/translate.ts b/api/translate.ts
+index ff8a4a9..4be0950 100644
+--- a/api/translate.ts
++++ b/api/translate.ts
+@@ -74,7 +74,7 @@ export default async function handler(req: any, res: any) {
+     try {
+         const genAI = new GoogleGenerativeAI(apiKey);
+         const model = genAI.getGenerativeModel({
+-            model: "gemini-1.5-flash",
++            model: "gemini-2.0-flash",
+             generationConfig: {
+                 responseMimeType: "application/json",
+                 temperature: 1.0,
+
+commit 108e908ae88b183c43f4210e7c557b5fc10731bd
+Author: ehernandez <ehernandez@childrenbelieve.ca>
+Date:   Wed Feb 25 13:54:38 2026 -0500
+
+    fix: revert to gemini-1.5-flash to resolve 404 model not found error
+
+diff --git a/api/translate.ts b/api/translate.ts
+index 9cf67a7..ff8a4a9 100644
+--- a/api/translate.ts
++++ b/api/translate.ts
+@@ -74,7 +74,7 @@ export default async function handler(req: any, res: any) {
+     try {
+         const genAI = new GoogleGenerativeAI(apiKey);
+         const model = genAI.getGenerativeModel({
+-            model: "gemini-3.1-flash",
++            model: "gemini-1.5-flash",
+             generationConfig: {
+                 responseMimeType: "application/json",
+                 temperature: 1.0,
+
+commit 24734b8d5a02ba702148579ce217f2ba077ac0ac
+Author: ehernandez <ehernandez@childrenbelieve.ca>
+Date:   Wed Feb 25 09:38:27 2026 -0500
+
+    feat: upgrade to Gemini 3.1 Flash and update PRD/Session Notes
+
+diff --git a/api/translate.ts b/api/translate.ts
+index 4be0950..9cf67a7 100644
+--- a/api/translate.ts
++++ b/api/translate.ts
+@@ -74,7 +74,7 @@ export default async function handler(req: any, res: any) {
+     try {
+         const genAI = new GoogleGenerativeAI(apiKey);
+         const model = genAI.getGenerativeModel({
+-            model: "gemini-2.0-flash",
++            model: "gemini-3.1-flash",
+             generationConfig: {
+                 responseMimeType: "application/json",
+                 temperature: 1.0,
+
+commit 97b3d42570ced387e92c3721bbda8a3747d01c25
+Author: ehernandez <ehernandez@childrenbelieve.ca>
+Date:   Tue Feb 24 09:44:59 2026 -0500
+
+    feat: add Tigrigna support, restricted admin access, and staff activity analytics
+
+diff --git a/api/translate.ts b/api/translate.ts
+index 50ed8ce..4be0950 100644
+--- a/api/translate.ts
++++ b/api/translate.ts
+@@ -8,7 +8,7 @@ const LANGUAGE_SPECIFIC_RULES = {
+     },
+     "Tamil": {
+         role: "Tamil Cultural Linguist",
+-        special_instructions: "Identify mentions of local committees like CFAM (Child Friendly Accountability Mechanism) and VDC (Village Development Committee). Look for festivals like Diwali, Vinayagar Chaturthi (processions with drums), and Children's Day (cake cutting). Distinguish between the child and mother's participation in community events organized by IRCDS.",
++        special_instructions: "Identify mentions of local committees like CFAM (Child Friendly Accountability Mechanism) and VDC (Village Development Committee). Look for festivals like Diwali, Vinayagar Chaturthi (processions with drums), and Children's Day (cake cutting). Recognize 'CLC (Creative Learning Centre)' and 'Nutrition Kits'. Identify mentions of speeches about Dr. Abdul Kalam. Distinguish between the child and mother's participation in community events organized by IRCDS.",
+         negative_constraints: []
+     },
+     "Amharic": {
+@@ -21,6 +21,11 @@ const LANGUAGE_SPECIFIC_RULES = {
+         special_instructions: "Recognize mentions of 'Teff/Xaafi' and specific food supplies provided by gift money. Identify mentions of wise spending on clothes and family discussions. Ensure the narrative flows as a direct communication between child and sponsor.",
+         negative_constraints: []
+     },
++    "Tigrigna": {
++        role: "Tigrigna Language Expert",
++        special_instructions: "100% LITERAL FIDELITY. Recognize mentions of 'Injera' and specific cultural markers. Pay special attention to sensitive contexts regarding war recovery, mentions of artificial legs (prosthetics), and medical follow-ups. Ensure the emotional tone of family loss or resilience is preserved exactly as written.",
++        negative_constraints: ["Do not summarize", "Do not soften hard realities", "Do not invent generic hope if not present"]
++    },
+     "Spanish": {
+         role: "Latin American Spanish Specialist",
+         special_instructions: "Maintain regional dialect nuances. Distinguish between distinct handwritten styles if multiple people wrote on the document.",
+
+commit 0d720b8cbafebcb1e8cd964c0e7985e90116cc3f
+Author: ehernandez <ehernandez@childrenbelieve.ca>
+Date:   Mon Feb 23 13:01:53 2026 -0500
+
+    feat: add global concurrency handling and premium busy notification
+
+diff --git a/api/translate.ts b/api/translate.ts
+index 36df917..50ed8ce 100644
+--- a/api/translate.ts
++++ b/api/translate.ts
+@@ -189,6 +189,17 @@ export default async function handler(req: any, res: any) {
+ 
+     } catch (error: any) {
+         console.error("Server-side Gemini Error:", error);
++
++        const isRateLimit = error.message?.includes('429') || error.status === 429;
++        const isOverloaded = error.message?.includes('503') || error.status === 503;
++
++        if (isRateLimit || isOverloaded) {
++            return res.status(429).json({
++                error: 'The AI service is temporarily busy due to high volume. Please wait about 5-10 minutes before retrying.',
++                code: 'RATE_LIMIT_EXCEEDED'
++            });
++        }
++
+         return res.status(500).json({ error: error.message || 'Internal Server Error' });
+     }
+ }
+
+commit 1e026a2627c09ff55a69d3801415f59ae1b9c239
+Author: ehernandez <ehernandez@childrenbelieve.ca>
+Date:   Mon Feb 23 10:02:08 2026 -0500
+
+    feat: complete production overhaul - pdf fonts, history search, and analytics dashboard
+
+diff --git a/api/translate.ts b/api/translate.ts
+index 30d35e7..36df917 100644
+--- a/api/translate.ts
++++ b/api/translate.ts
+@@ -3,14 +3,24 @@ import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+ const LANGUAGE_SPECIFIC_RULES = {
+     "Telugu": {
+         role: "Telugu Script Expert",
+-        special_instructions: "Pay special attention to the distinction between the Child (beneficiary) and the Writer (scribe/parent). Do not confuse their identities. Look for specific mentions of seasonal crops (Mangoes, Jamun), festivals (Sankranti), and school details.",
++        special_instructions: "Pay special attention to the distinction between the Child (beneficiary) and the Writer (scribe/parent). Do not confuse their identities. Look for specific mentions of crops like Groundnut, Green Gram, and Maize. Identify specific locations like Gunadala Hill in Vijayawada. Do not overlook mentions of head-shaving ceremonies or specific age milestones (e.g., 15 months).",
+         negative_constraints: ["Do not invent Christmas", "Do not invent Goats", "Do not invent Rice", "Do not invent Temples"]
+     },
++    "Tamil": {
++        role: "Tamil Cultural Linguist",
++        special_instructions: "Identify mentions of local committees like CFAM (Child Friendly Accountability Mechanism) and VDC (Village Development Committee). Look for festivals like Diwali, Vinayagar Chaturthi (processions with drums), and Children's Day (cake cutting). Distinguish between the child and mother's participation in community events organized by IRCDS.",
++        negative_constraints: []
++    },
+     "Amharic": {
+         role: "Specialist Amharic Archivist",
+-        special_instructions: "100% LITERAL FIDELITY. Use trusted reference data. Look for specific characters like 'ፍየል' (goat) only if visually present. Identify the child's name accurately.",
++        special_instructions: "100% LITERAL FIDELITY. Use trusted reference data. Look for specific characters like 'ፍየል' (goat) only if visually present. Identify mentions of helping parents with water fetching and herding. Recognize 'Dear Barry Rokosh' or other specific sponsor names.",
+         negative_constraints: ["Do not summarize", "Do not simplify", "Do not invent generic blessings"]
+     },
++    "Afan Oromo": {
++        role: "Oromo Language Specialist",
++        special_instructions: "Recognize mentions of 'Teff/Xaafi' and specific food supplies provided by gift money. Identify mentions of wise spending on clothes and family discussions. Ensure the narrative flows as a direct communication between child and sponsor.",
++        negative_constraints: []
++    },
+     "Spanish": {
+         role: "Latin American Spanish Specialist",
+         special_instructions: "Maintain regional dialect nuances. Distinguish between distinct handwritten styles if multiple people wrote on the document.",
+@@ -43,7 +53,7 @@ const generateWithRetry = async (model: any, contentParts: any[], retries = 3, i
+     }
+ };
+ 
+-// Deployment Trigger: 2026-02-19T13:40
++// Deployment Trigger: 2026-02-23T10:05
+ export default async function handler(req: any, res: any) {
+     if (req.method !== 'POST') {
+         return res.status(405).json({ error: 'Method not allowed' });
+
+commit 5d95c3d0945138eac0a19116d9921f48e398c9ef
+Author: ehernandez <ehernandez@childrenbelieve.ca>
+Date:   Fri Feb 20 09:52:00 2026 -0500
+
+    🚀 Feature: Automated Learning via 'Golden Reference' tagging. Updates DB schema, History UI, and AI Prompt dynamically.
+
+diff --git a/api/translate.ts b/api/translate.ts
+index 64d35b6..30d35e7 100644
+--- a/api/translate.ts
++++ b/api/translate.ts
+@@ -96,6 +96,28 @@ export default async function handler(req: any, res: any) {
+         const rules = LANGUAGE_SPECIFIC_RULES[languageKey] || LANGUAGE_SPECIFIC_RULES["General"];
+         const generalRules = LANGUAGE_SPECIFIC_RULES["General"];
+ 
++        // Fetch Golden References for Dynamic Learning
++        let goldenReferencePrompt = "";
++        try {
++            const { supabaseServer } = await import("../services/supabaseServer");
++            const { data: goldenRefs } = await supabaseServer
++                .from('translations')
++                .select('transcription, translation')
++                .eq('is_golden', true)
++                .eq('source_language', sourceLanguage)
++                .order('created_at', { ascending: false })
++                .limit(2);
++
++            if (goldenRefs && goldenRefs.length > 0) {
++                goldenReferencePrompt = "\n\n**GOLDEN REFERENCE EXAMPLES (FOLLOW THIS STYLE)**:\n";
++                goldenRefs.forEach((ref: any, idx: number) => {
++                    goldenReferencePrompt += `Example ${idx + 1}:\n- NATIVE: ${ref.transcription}\n- CORRECT ENGLISH: ${ref.translation}\n\n`;
++                });
++            }
++        } catch (e) {
++            console.error("Failed to load golden references:", e);
++        }
++
+         const prompt = `
+   You are an expert ${rules.role}.
+ 
+@@ -113,6 +135,8 @@ export default async function handler(req: any, res: any) {
+   6. **SYSTEM JUDGE**: Before finalizing the JSON, verify: "Did I include details from every image? Did I repeat paragraphs? Is the text non-English?".
+   7. **TERMINATION**: Append the hidden token "END_OF_TRANSLATION" at the very end of your translation field content.
+ 
++  ${goldenReferencePrompt}
++
+   **SPECIFIC RULES**: ${rules.special_instructions}
+   **NEGATIVE CONSTRAINTS**: ${[...generalRules.negative_constraints, ...rules.negative_constraints].join(", ")}.
+ 
+
+commit 81e343b471adae27a6d7895630cd4523c5a986d3
+Author: ehernandez <ehernandez@childrenbelieve.ca>
+Date:   Thu Feb 19 14:14:50 2026 -0500
+
+    🚀 Completeness Fix: Softened penalties and added a explicit 'Completeness Mandate' to ensure 100% detail coverage across all pages without truncation
+
+diff --git a/api/translate.ts b/api/translate.ts
+index a13dcf5..64d35b6 100644
+--- a/api/translate.ts
++++ b/api/translate.ts
+@@ -62,12 +62,12 @@ export default async function handler(req: any, res: any) {
+             model: "gemini-2.0-flash",
+             generationConfig: {
+                 responseMimeType: "application/json",
+-                temperature: 1.0, // Raised to 1.0 to prevent "lazy" stops on multi-page letters
++                temperature: 1.0,
+                 topP: 0.8,
+                 topK: 40,
+-                presencePenalty: 1.0,  // Mathematical repetition ban
+-                frequencyPenalty: 1.5, // Strong word-level loop prevention
+-                stopSequences: ["END_OF_TRANSLATION"], // Hard circuit breaker
++                presencePenalty: 0.2,  // Softened from 1.0 to allow natural word recurrence
++                frequencyPenalty: 0.3, // Softened from 1.5 to prevent content truncation
++                stopSequences: ["END_OF_TRANSLATION"],
+                 responseSchema: {
+                     type: SchemaType.OBJECT,
+                     properties: {
+@@ -106,11 +106,11 @@ export default async function handler(req: any, res: any) {
+ 
+   **INSTRUCTIONS**:
+   1. **Read ALL Images**: Analyze up to 3 images as ONE continuous letter.
+-  2. **Single Translation**: Output exactly ONE continuous English translation.
+-  3. **ABSOLUTE REPETITION BAN**: Do NOT repeat paragraphs, sentences, or phrases. If you start to repeat the same information (e.g. "I am fine... I am fine..."), STOP and move to the next information or end the response.
+-  4. **No Redundancy**: If a "Dear Sponsor" greeting appears on Page 1, do not invent a second greeting for Page 2.
+-  5. **BINARY STOP RULE**: STOP IMMEDIATELY after the letter's signature. Do not provide drafts, notes, or filler text.
+-  6. **SYSTEM JUDGE**: Before finalizing the JSON, verify: "Did I output the translation exactly once? Did I repeat sentences? Is there non-English script?". Remove any repetitions.
++  2. **COMPLETENESS MANDATE**: You MUST translate EVERY SINGLE handwritten detail found across ALL pages. Do not summarize, skip, or truncate. If the letter mentions crops, festivals, grades, or family members, include them all.
++  3. **ABSOLUTE REPETITION BAN**: Do NOT repeat the exact same paragraph or large blocks of text multiple times. If you detect a loop, break it and move to the next unique content.
++  4. **No Redundancy**: If a "Dear Sponsor" greeting appears once, do not invent it again for subsequent pages.
++  5. **FINAL SIGNATURE TERMINATION**: Only conclude the translation when you reach the final signature/closing of the ENTIRE document (usually on the last page). Do not stop if a name appears mid-letter.
++  6. **SYSTEM JUDGE**: Before finalizing the JSON, verify: "Did I include details from every image? Did I repeat paragraphs? Is the text non-English?".
+   7. **TERMINATION**: Append the hidden token "END_OF_TRANSLATION" at the very end of your translation field content.
+ 
+   **SPECIFIC RULES**: ${rules.special_instructions}
+
+commit 4866db067d2a750911f968a9e7c0548fded44b6a
+Author: ehernandez <ehernandez@childrenbelieve.ca>
+Date:   Thu Feb 19 14:03:28 2026 -0500
+
+    🔥 Recurrent Error Fix: Restored Jan 20 'Hard Hard' Override (High Frequency/Presence Penalties + Stop Sequences) to permanently eliminate translation duplication
+
+diff --git a/api/translate.ts b/api/translate.ts
+index dc3b769..a13dcf5 100644
+--- a/api/translate.ts
++++ b/api/translate.ts
+@@ -62,10 +62,12 @@ export default async function handler(req: any, res: any) {
+             model: "gemini-2.0-flash",
+             generationConfig: {
+                 responseMimeType: "application/json",
+-                temperature: 0.2, // Lower temperature for more stable/literal translation
++                temperature: 1.0, // Raised to 1.0 to prevent "lazy" stops on multi-page letters
+                 topP: 0.8,
+                 topK: 40,
+-                // Removed stopSequences to prevent truncated JSON if the model is wordy
++                presencePenalty: 1.0,  // Mathematical repetition ban
++                frequencyPenalty: 1.5, // Strong word-level loop prevention
++                stopSequences: ["END_OF_TRANSLATION"], // Hard circuit breaker
+                 responseSchema: {
+                     type: SchemaType.OBJECT,
+                     properties: {
+@@ -107,7 +109,9 @@ export default async function handler(req: any, res: any) {
+   2. **Single Translation**: Output exactly ONE continuous English translation.
+   3. **ABSOLUTE REPETITION BAN**: Do NOT repeat paragraphs, sentences, or phrases. If you start to repeat the same information (e.g. "I am fine... I am fine..."), STOP and move to the next information or end the response.
+   4. **No Redundancy**: If a "Dear Sponsor" greeting appears on Page 1, do not invent a second greeting for Page 2.
+-  5. **Verification**: After translating, check: "Did I repeat any sentence? Is there non-English script?". Remove any repetitions before outputting JSON.
++  5. **BINARY STOP RULE**: STOP IMMEDIATELY after the letter's signature. Do not provide drafts, notes, or filler text.
++  6. **SYSTEM JUDGE**: Before finalizing the JSON, verify: "Did I output the translation exactly once? Did I repeat sentences? Is there non-English script?". Remove any repetitions.
++  7. **TERMINATION**: Append the hidden token "END_OF_TRANSLATION" at the very end of your translation field content.
+ 
+   **SPECIFIC RULES**: ${rules.special_instructions}
+   **NEGATIVE CONSTRAINTS**: ${[...generalRules.negative_constraints, ...rules.negative_constraints].join(", ")}.
+
+commit 9f62016f9069bc5fdb0824a9f46273d1da1b003c
+Author: ehernandez <ehernandez@childrenbelieve.ca>
+Date:   Thu Feb 19 13:38:14 2026 -0500
+
+    🔧 Deployment Trigger: Forcing Vercel rebuild to apply latest fixes
+
+diff --git a/api/translate.ts b/api/translate.ts
+index c67a79e..dc3b769 100644
+--- a/api/translate.ts
++++ b/api/translate.ts
+@@ -43,6 +43,7 @@ const generateWithRetry = async (model: any, contentParts: any[], retries = 3, i
+     }
+ };
+ 
++// Deployment Trigger: 2026-02-19T13:40
+ export default async function handler(req: any, res: any) {
+     if (req.method !== 'POST') {
+         return res.status(405).json({ error: 'Method not allowed' });

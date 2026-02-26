@@ -74,14 +74,14 @@ export default async function handler(req: any, res: any) {
     try {
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
-            model: "gemini-2.0-flash",
+            model: "gemini-3.1-pro-preview",
             generationConfig: {
                 responseMimeType: "application/json",
-                temperature: 1.0,
+                temperature: 0.1,
                 topP: 0.8,
                 topK: 40,
-                presencePenalty: 0.2,  // Softened from 1.0 to allow natural word recurrence
-                frequencyPenalty: 0.3, // Softened from 1.5 to prevent content truncation
+                presencePenalty: 0.4,
+                frequencyPenalty: 0.5,
                 stopSequences: ["END_OF_TRANSLATION"],
                 responseSchema: {
                     type: SchemaType.OBJECT,
