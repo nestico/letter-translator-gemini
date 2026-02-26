@@ -274,19 +274,14 @@ function App() {
             >
               <span className="material-symbols-outlined">close</span>
             </button>
-            <div className="w-full h-full flex flex-col items-center justify-center gap-6">
-              <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center text-primary animate-pulse">
-                <span className="material-symbols-outlined text-4xl">play_circle</span>
-              </div>
-              <div className="text-center">
-                <h3 className="text-2xl font-bold text-white mb-2">Application Walkthrough</h3>
-                <p className="text-slate-400">Recording in Progress. Contact Admin for early access.</p>
-              </div>
-              {/* 
-                  Drop your YouTube embed iframe here:
-                  <iframe width="100%" height="100%" src="https://www.youtube.com/embed/XXXXX" title="Letter Translator Demo" />
-                */}
-            </div>
+            <iframe
+              src="https://player.vimeo.com/video/1168591837"
+              className="w-full h-full"
+              frameBorder="0"
+              allow="autoplay; fullscreen; picture-in-picture"
+              allowFullScreen
+              title="Letter Translator Demo"
+            ></iframe>
           </div>
         </div>
       )}
