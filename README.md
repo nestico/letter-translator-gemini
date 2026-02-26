@@ -7,7 +7,7 @@
 **Letter Translator** is an intelligent web application designed to help users decipher, transcribe, and translate handwritten documents. Whether it's an old family letter or a historical document, this tool leverages advanced AI models to convert difficult handwriting into clear, digital text and translate it into your preferred language.
 
 ## Key Features
-- **AI-Powered Deciphering**: Uses **Google Gemini 2.0 Flash** to accurately transcribe cursive and aged handwriting with high fidelity.
+- **AI-Powered Deciphering**: Uses **Google Gemini 3.1** (Pro for complex scripts, Flash for scale) to accurately transcribe cursive and aged handwriting with high fidelity.
 - **Multi-Language Support**: Auto-detects source language (Amharic, Tigrigna, Afan Oromo, Telugu, Tamil, Spanish, etc.) and translates to clear, modern English.
 - **Golden Reference Learning**: Leverages verified "Ground Truth" data for high-accuracy few-shot translation of complex humanitarian content.
 - **Smart Image Processing**: 
@@ -26,7 +26,7 @@
 
 ## Tech Stack
 - **Frontend**: React, TypeScript, Vite, TailwindCSS
-- **AI Service**: Google Gemini 2.0 Flash (@google/generative-ai)
+- **AI Service**: Google Gemini 3.1 (@google/generative-ai)
 - **Backend/Auth**: Supabase
 - **PDF Generation**: jsPDF
 
