@@ -274,8 +274,9 @@ function App() {
             >
               <span className="material-symbols-outlined">close</span>
             </button>
+            {/* EDIT VIDEO URL HERE: Simply replace the ID 1168591837 below with your new Vimeo/YouTube ID */}
             <iframe
-              src="https://player.vimeo.com/video/1168591837"
+              src="https://player.vimeo.com/video/1168591837?autoplay=1&muted=0"
               className="w-full h-full"
               frameBorder="0"
               allow="autoplay; fullscreen; picture-in-picture"
