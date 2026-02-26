@@ -54,7 +54,7 @@ async function importTruthFiles() {
         const { data, error } = await supabase
             .from('translations')
             .insert({
-                user_id: '00000000-0000-0000-0000-000000000000', // System identifier
+                user_id: '82551711-7881-4f84-847d-86b4f716ed2c', // System identifier (ehernandez)
                 file_name: file,
                 transcription,
                 translation,

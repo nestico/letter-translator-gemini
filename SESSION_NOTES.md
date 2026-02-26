@@ -410,3 +410,33 @@
 3. **Smart Toggle Roadmap**: Monitor production costs for 30 days before implementing the Flash/Pro dynamic cost-optimization toggle.
 4. **Bulk Processing Pipeline**: Explore requirements for multi-letter batch uploads.
 
+# Session Notes - Feb 26, 2026
+
+### 40. Multimedia Demo Integration
+- **Objective**: Enhance the landing page with a ready-to-use video demonstration.
+- **Implementation**:
+    - **Vimeo Embedding**: Integrated the official Vimeo demonstration video into the landing page modal.
+    - **Autoplay UX**: Enabled `autoplay=1` and `muted=0` parameters to ensure immediate engagement upon opening.
+    - **Dev Guidance**: Added explicit code comments in `App.tsx` for easy URL swapping in the future.
+
+### 41. Smart Model Routing (Intelligence vs. Cost)
+- **Objective**: Restore the high accuracy of Tigrigna/Amharic translations while maintaining low costs for standard languages.
+- **Implementation**:
+    - **Dynamic Switch**: Updated `api/translate.ts` to route requests based on language:
+        - **Gemini 3.1 Pro**: Assigned to **Tigrigna** and **Amharic** for deep script reasoning.
+        - **Gemini 3.1 Flash**: Assigned to all other languages (Spanish, French, etc.) for cost efficiency.
+    - **Literal Tuning**: Set global `temperature` to **0.1** to prioritize strict verbatim transcription and eliminate AI creative "hallucinations."
+
+### 42. "Golden Reference" Library Ingestion
+- **Objective**: Prime the AI with verified human truths for Tigrigna and other key languages.
+- **Implementation**:
+    - **Bulk Import**: Successfully ingested **18 Truth Files** (`_Truth.txt`) into the Supabase `translations` table.
+    - **Security (RLS) Fix**: Created and applied a specialized SQL migration (`RLS_FIX_FOR_IMPORTS.sql`) to allow system-level seeding of "Golden" data under an authorized admin UUID.
+    - **Identity Alignment**: Linked all system-owned references to the authorized administrator UUID (**82551711-7881-4f84-847d-86b4f716ed2c**) to honor database foreign key constraints.
+
+## Final Project Status (Feb 26)
+- **Status**: **PRODUCTION READY & OPTIMIZED**. The system now features a self-improving hybrid AI engine and a complete verified reference library.
+- **Next Steps**:
+    - Final walkthrough/demo with stakeholders next week.
+    - Monitor "Smart Routing" cost distribution in Google Cloud Console.
+    - Verify PDF font rendering for the new Tigrigna samples.

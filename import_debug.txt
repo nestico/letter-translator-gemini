@@ -1,0 +1,128 @@
+Starting import...
+Found 18 truth files.
+Importing 01129498_Afan_Oromo_Truth.txt as (ETH) Afan Oromo...
+Error importing 01129498_Afan_Oromo_Truth.txt: {
+  code: '42501',
+  details: null,
+  hint: null,
+  message: 'new row violates row-level security policy for table "translations"'
+}
+Importing 011301388_Afan_Oromo_Truth.txt as (ETH) Afan Oromo...
+Error importing 011301388_Afan_Oromo_Truth.txt: {
+  code: '42501',
+  details: null,
+  hint: null,
+  message: 'new row violates row-level security policy for table "translations"'
+}
+Importing 01130240_Amharic_Truth.txt as (ETH) Amharic...
+Error importing 01130240_Amharic_Truth.txt: {
+  code: '42501',
+  details: null,
+  hint: null,
+  message: 'new row violates row-level security policy for table "translations"'
+}
+Importing 01135329_Amharic_Truth.txt as (ETH) Amharic...
+Error importing 01135329_Amharic_Truth.txt: {
+  code: '42501',
+  details: null,
+  hint: null,
+  message: 'new row violates row-level security policy for table "translations"'
+}
+Importing 01179030_Afan_Oromo_Truth.txt as (ETH) Afan Oromo...
+Error importing 01179030_Afan_Oromo_Truth.txt: {
+  code: '42501',
+  details: null,
+  hint: null,
+  message: 'new row violates row-level security policy for table "translations"'
+}
+Importing 01187498_Tamil_Truth.txt as (ind) Tamil...
+Error importing 01187498_Tamil_Truth.txt: {
+  code: '42501',
+  details: null,
+  hint: null,
+  message: 'new row violates row-level security policy for table "translations"'
+}
+Importing 01189291_Tamil_Truth.txt as (ind) Tamil...
+Error importing 01189291_Tamil_Truth.txt: {
+  code: '42501',
+  details: null,
+  hint: null,
+  message: 'new row violates row-level security policy for table "translations"'
+}
+Importing 01189334_Tamil_Truth.txt as (ind) Tamil...
+Error importing 01189334_Tamil_Truth.txt: {
+  code: '42501',
+  details: null,
+  hint: null,
+  message: 'new row violates row-level security policy for table "translations"'
+}
+Importing 01189339_Tamil_Truth.txt as (ind) Tamil...
+Error importing 01189339_Tamil_Truth.txt: {
+  code: '42501',
+  details: null,
+  hint: null,
+  message: 'new row violates row-level security policy for table "translations"'
+}
+Importing 01189444_Telugu_Truth.txt as (Ind) Telugu...
+Error importing 01189444_Telugu_Truth.txt: {
+  code: '42501',
+  details: null,
+  hint: null,
+  message: 'new row violates row-level security policy for table "translations"'
+}
+Importing 01190802_Tamil_Truth.txt as (ind) Tamil...
+Error importing 01190802_Tamil_Truth.txt: {
+  code: '42501',
+  details: null,
+  hint: null,
+  message: 'new row violates row-level security policy for table "translations"'
+}
+Importing 01206340_Amharic_Truth.txt as (ETH) Amharic...
+Error importing 01206340_Amharic_Truth.txt: {
+  code: '42501',
+  details: null,
+  hint: null,
+  message: 'new row violates row-level security policy for table "translations"'
+}
+Importing 01212732_Tigrigna_Truth.txt as (ETH) Tigrigna...
+Error importing 01212732_Tigrigna_Truth.txt: {
+  code: '42501',
+  details: null,
+  hint: null,
+  message: 'new row violates row-level security policy for table "translations"'
+}
+Importing 01212738_Tigrigna_Truth.txt as (ETH) Tigrigna...
+Error importing 01212738_Tigrigna_Truth.txt: {
+  code: '42501',
+  details: null,
+  hint: null,
+  message: 'new row violates row-level security policy for table "translations"'
+}
+Importing 01212767_Tigrigna_Truth.txt as (ETH) Tigrigna...
+Error importing 01212767_Tigrigna_Truth.txt: {
+  code: '42501',
+  details: null,
+  hint: null,
+  message: 'new row violates row-level security policy for table "translations"'
+}
+Importing 01213533_Tigrigna_Truth.txt as (ETH) Tigrigna...
+Error importing 01213533_Tigrigna_Truth.txt: {
+  code: '42501',
+  details: null,
+  hint: null,
+  message: 'new row violates row-level security policy for table "translations"'
+}
+Importing 01213667_Tigrigna_Truth.txt as (ETH) Tigrigna...
+Error importing 01213667_Tigrigna_Truth.txt: {
+  code: '42501',
+  details: null,
+  hint: null,
+  message: 'new row violates row-level security policy for table "translations"'
+}
+Importing 01213678_Tigrigna_Truth.txt as (ETH) Tigrigna...
+Error importing 01213678_Tigrigna_Truth.txt: {
+  code: '42501',
+  details: null,
+  hint: null,
+  message: 'new row violates row-level security policy for table "translations"'
+}
