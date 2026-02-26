@@ -72,9 +72,17 @@ export default async function handler(req: any, res: any) {
     }
 
     try {
+        // SMART TOGGLE: Use Pro for difficult languages, Flash for standard to keep costs controlled.
+        const isComplexLanguage = sourceLanguage.toLowerCase().includes('tigrigna') ||
+            sourceLanguage.toLowerCase().includes('amharic');
+
+        const activeModelName = isComplexLanguage ? "gemini-3.1-pro-preview" : "gemini-3.1-flash";
+
+        console.log(`[Gemini API] Routing to ${activeModelName} based on language: ${sourceLanguage}`);
+
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
-            model: "gemini-3.1-pro-preview",
+            model: activeModelName,
             generationConfig: {
                 responseMimeType: "application/json",
                 temperature: 0.1,
