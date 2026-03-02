@@ -92,8 +92,6 @@ export default async function handler(req: any, res: any) {
                 temperature: 0.1,
                 topP: 0.8,
                 topK: 40,
-                presencePenalty: 0.4,
-                frequencyPenalty: 0.5,
                 stopSequences: ["END_OF_TRANSLATION"],
                 responseSchema: {
                     type: SchemaType.OBJECT,
