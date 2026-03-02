@@ -8,11 +8,11 @@ export const translateImage = async (
   onQueueUpdate?: (position: number) => void
 ): Promise<TranslationResult> => {
 
-  // Calculate approximate size. Guard against huge payloads.
+  // Calculate approximate size. VERCEL has a 4.5MB limit on request body.
   const totalPayloadSize = JSON.stringify({ images, sourceLanguage, targetLanguage }).length;
-  if (totalPayloadSize > 19 * 1024 * 1024) { // 19MB Safety buffer
-    console.warn("Payload approaches 20MB limit. Ensure images are compressed.");
-    throw new Error("Payload is too large (>20MB). Please compress images or reduce resolution to prevent API failure.");
+  if (totalPayloadSize > 4 * 1024 * 1024) { // 4MB Safety buffer for Vercel 4.5MB limit
+    console.warn("Payload approaches Vercel 4.5MB limit. Ensure images are compressed.");
+    throw new Error("Payload is too large for the server (>4.5MB). Please compress images or reduce resolution to prevent failure.");
   }
 
   // Define the core generation task calling our serverless API

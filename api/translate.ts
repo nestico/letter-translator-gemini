@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import { supabaseServer } from "../services/supabaseServer";
 
 const LANGUAGE_SPECIFIC_RULES = {
     "Telugu": {
@@ -124,7 +125,7 @@ export default async function handler(req: any, res: any) {
         // Fetch Golden References for Dynamic Learning
         let goldenReferencePrompt = "";
         try {
-            const { supabaseServer } = await import("../services/supabaseServer");
+            console.log(`[Supabase] Fetching references for: ${sourceLanguage}`);
             const { data: goldenRefs } = await supabaseServer
                 .from('translations')
                 .select('transcription, translation')
