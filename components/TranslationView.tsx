@@ -529,7 +529,7 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                   <div className="absolute inset-0 bg-white/80 dark:bg-black/60 flex flex-col items-center justify-center z-10 backdrop-blur-sm">
                      <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
                      <p className="text-lg font-bold text-primary animate-pulse">Deciphering with Gemini AI...</p>
-                     <p className="text-sm text-slate-500">Gemini 2.0 Flash is analyzing strokes & context across {images.length} page{images.length !== 1 ? 's' : ''}</p>
+                     <p className="text-sm text-slate-500">The Gemini 3.1 engine is analyzing strokes & context across {images.length} page{images.length !== 1 ? 's' : ''}</p>
                   </div>
                )}
             </div>
