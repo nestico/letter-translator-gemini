@@ -1,5 +1,4 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
-import { supabaseServer } from "../services/supabaseServer";
 
 const LANGUAGE_SPECIFIC_RULES = {
     "Telugu": {
@@ -131,8 +130,13 @@ export default async function handler(req: any, res: any) {
         // 2. RESILIENT SUPABASE FETCH: Never let DB failure crash the AI pipeline
         let goldenReferencePrompt = "";
         try {
-            if (supabaseServer) {
-                const { data: goldenRefs, error: dbErr } = await supabaseServer
+            const { createClient } = await import('@supabase/supabase-js');
+            const sbUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+            const sbKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+
+            if (sbUrl && sbKey) {
+                const sb = createClient(sbUrl, sbKey);
+                const { data: goldenRefs, error: dbErr } = await sb
                     .from('translations')
                     .select('transcription, translation')
                     .eq('is_golden', true)

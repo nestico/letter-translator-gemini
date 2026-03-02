@@ -34,8 +34,16 @@ export const translateImage = async (
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Server responded with ${response.status}`);
+        const errorText = await response.text();
+        let errorMsg = `Server Error (${response.status})`;
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMsg = errorData.error || errorMsg;
+        } catch (e) {
+          // If not JSON, use a snippet of the HTML error
+          errorMsg = errorText.substring(0, 100).replace(/<[^>]*>/g, '').trim() || errorMsg;
+        }
+        throw new Error(errorMsg);
       }
 
       const data = await response.json();
