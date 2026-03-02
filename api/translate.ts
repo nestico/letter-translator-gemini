@@ -42,6 +42,7 @@ const LANGUAGE_SPECIFIC_RULES = {
 const generateWithRetry = async (model: any, contentParts: any[], retries = 3, initialDelay = 2000) => {
     for (let i = 0; i < retries; i++) {
         try {
+            console.log(`[Gemini] Attempt ${i + 1} for content generation...`);
             const result = await model.generateContent(contentParts);
             return result;
         } catch (error: any) {
@@ -51,6 +52,7 @@ const generateWithRetry = async (model: any, contentParts: any[], retries = 3, i
             if ((isRateLimit || isOverloaded) && i < retries - 1) {
                 const jitter = Math.random() * 1000;
                 const delay = (initialDelay * Math.pow(2, i)) + jitter;
+                console.warn(`[Gemini] retryable error on attempt ${i + 1}. Waiting ${delay}ms...`);
                 await new Promise(resolve => setTimeout(resolve, delay));
                 continue;
             }
@@ -59,31 +61,35 @@ const generateWithRetry = async (model: any, contentParts: any[], retries = 3, i
     }
 };
 
-// Deployment Trigger: 2026-02-23T10:05
 export default async function handler(req: any, res: any) {
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed' });
-    }
-
-    const { images, sourceLanguage, targetLanguage } = req.body;
-    const apiKey = process.env.GEMINI_API_KEY;
-
-    if (!apiKey) {
-        return res.status(500).json({ error: 'Gemini API Key is missing on the server.' });
-    }
-
+    // 1. TOP-LEVEL GLOBAL CATCHER: Ensure we ALWAYS return JSON
     try {
-        // SMART TOGGLE: Use Pro for difficult languages, Flash for standard to keep costs controlled.
-        const lowerLang = sourceLanguage.toLowerCase();
+        if (req.method !== 'POST') {
+            return res.status(405).json({ error: 'Method not allowed' });
+        }
+
+        const { images, sourceLanguage, targetLanguage } = req.body;
+        const apiKey = process.env.GEMINI_API_KEY;
+
+        if (!apiKey) {
+            return res.status(500).json({ error: 'Gemini API Key is missing on the server configuration.' });
+        }
+
+        if (!images || !Array.isArray(images) || images.length === 0) {
+            return res.status(400).json({ error: 'No images provided for translation.' });
+        }
+
+        const lowerLang = (sourceLanguage || '').toLowerCase();
+
+        // Use Pro for complex scripts, Flash for standard
         const isComplexLanguage = lowerLang.includes('tigrigna') ||
             lowerLang.includes('amharic') ||
             lowerLang.includes('telugu') ||
             lowerLang.includes('tamil');
 
-        // Use correct preview model IDs found in the v1beta inventory
         const activeModelName = isComplexLanguage ? "gemini-3.1-pro-preview" : "gemini-3-flash-preview";
 
-        console.log(`[Gemini API] Routing to ${activeModelName} based on language: ${sourceLanguage}`);
+        console.log(`[Gemini API] Target: ${activeModelName} | Language: ${sourceLanguage} | Pages: ${images.length}`);
 
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
@@ -115,33 +121,34 @@ export default async function handler(req: any, res: any) {
         });
 
         const languageKey = Object.keys(LANGUAGE_SPECIFIC_RULES).find(key =>
-            sourceLanguage.toLowerCase().includes(key.toLowerCase())
+            lowerLang.includes(key.toLowerCase())
         ) || "General";
 
         // @ts-ignore
         const rules = LANGUAGE_SPECIFIC_RULES[languageKey] || LANGUAGE_SPECIFIC_RULES["General"];
         const generalRules = LANGUAGE_SPECIFIC_RULES["General"];
 
-        // Fetch Golden References for Dynamic Learning
+        // 2. RESILIENT SUPABASE FETCH: Never let DB failure crash the AI pipeline
         let goldenReferencePrompt = "";
         try {
-            console.log(`[Supabase] Fetching references for: ${sourceLanguage}`);
-            const { data: goldenRefs } = await supabaseServer
-                .from('translations')
-                .select('transcription, translation')
-                .eq('is_golden', true)
-                .eq('source_language', sourceLanguage)
-                .order('created_at', { ascending: false })
-                .limit(2);
+            if (supabaseServer) {
+                const { data: goldenRefs, error: dbErr } = await supabaseServer
+                    .from('translations')
+                    .select('transcription, translation')
+                    .eq('is_golden', true)
+                    .eq('source_language', sourceLanguage)
+                    .order('created_at', { ascending: false })
+                    .limit(2);
 
-            if (goldenRefs && goldenRefs.length > 0) {
-                goldenReferencePrompt = "\n\n**GOLDEN REFERENCE EXAMPLES (FOLLOW THIS STYLE)**:\n";
-                goldenRefs.forEach((ref: any, idx: number) => {
-                    goldenReferencePrompt += `Example ${idx + 1}:\n- NATIVE: ${ref.transcription}\n- CORRECT ENGLISH: ${ref.translation}\n\n`;
-                });
+                if (!dbErr && goldenRefs && goldenRefs.length > 0) {
+                    goldenReferencePrompt = "\n\n**GOLDEN REFERENCE EXAMPLES (FOLLOW THIS STYLE)**:\n";
+                    goldenRefs.forEach((ref: any, idx: number) => {
+                        goldenReferencePrompt += `Example ${idx + 1}:\n- NATIVE: ${ref.transcription}\n- CORRECT ENGLISH: ${ref.translation}\n\n`;
+                    });
+                }
             }
         } catch (e) {
-            console.error("Failed to load golden references:", e);
+            console.error("[Supabase] Silent failure fetching golden references:", e);
         }
 
         const prompt = `
@@ -200,22 +207,24 @@ export default async function handler(req: any, res: any) {
             }
         }
 
-        const parsed = JSON.parse(text);
-        return res.status(200).json(parsed);
-
-    } catch (error: any) {
-        console.error("Server-side Gemini Error:", error);
-
-        const isRateLimit = error.message?.includes('429') || error.status === 429;
-        const isOverloaded = error.message?.includes('503') || error.status === 503;
-
-        if (isRateLimit || isOverloaded) {
-            return res.status(429).json({
-                error: 'The AI service is temporarily busy due to high volume. Please wait about 5-10 minutes before retrying.',
-                code: 'RATE_LIMIT_EXCEEDED'
-            });
+        try {
+            const parsed = JSON.parse(text);
+            return res.status(200).json(parsed);
+        } catch (jsonErr) {
+            console.error("[Gemini] Invalid JSON returned from AI:", text);
+            return res.status(500).json({ error: "The AI returned an invalid format. Please try again.", raw: text.substring(0, 100) });
         }
 
-        return res.status(500).json({ error: error.message || 'Internal Server Error' });
+    } catch (error: any) {
+        console.error("❌ CRITICAL SERVER ERROR:", error);
+
+        const status = error.status || 500;
+        const msg = error.message || 'Unknown Server Error';
+
+        // Ensure even catastrophic errors return JSON to avoid "Unexpected token A" in frontend
+        return res.status(status).json({
+            error: `Server Error: ${msg}`,
+            code: error.code || 'INTERNAL_ERROR'
+        });
     }
 }
