@@ -73,10 +73,14 @@ export default async function handler(req: any, res: any) {
 
     try {
         // SMART TOGGLE: Use Pro for difficult languages, Flash for standard to keep costs controlled.
-        const isComplexLanguage = sourceLanguage.toLowerCase().includes('tigrigna') ||
-            sourceLanguage.toLowerCase().includes('amharic');
+        const lowerLang = sourceLanguage.toLowerCase();
+        const isComplexLanguage = lowerLang.includes('tigrigna') ||
+            lowerLang.includes('amharic') ||
+            lowerLang.includes('telugu') ||
+            lowerLang.includes('tamil');
 
-        const activeModelName = isComplexLanguage ? "gemini-3.1-pro-preview" : "gemini-3.1-flash";
+        // Use correct preview model IDs found in the v1beta inventory
+        const activeModelName = isComplexLanguage ? "gemini-3.1-pro-preview" : "gemini-3-flash-preview";
 
         console.log(`[Gemini API] Routing to ${activeModelName} based on language: ${sourceLanguage}`);
 

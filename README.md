@@ -5,9 +5,10 @@
 
 ## Overview
 **Letter Translator** is an intelligent web application designed to help users decipher, transcribe, and translate handwritten documents. Whether it's an old family letter or a historical document, this tool leverages advanced AI models to convert difficult handwriting into clear, digital text and translate it into your preferred language.
+- **Implementation**: Upgraded core translation handler to `gemini-3-flash-preview`, improving both reasoning capability and long-term stability.
 
 ## Key Features
-- **AI-Powered Deciphering**: Uses **Google Gemini 3.1** (Pro for complex scripts, Flash for scale) to accurately transcribe cursive and aged handwriting with high fidelity.
+- **AI Engine**: Hybrid Google Gemini 3 (Dynamic routing between **Pro 3.1** for complex scripts and **Flash** for cost-efficiency).
 - **Multi-Language Support**: Auto-detects source language (Amharic, Tigrigna, Afan Oromo, Telugu, Tamil, Spanish, etc.) and translates to clear, modern English.
 - **Golden Reference Learning**: Leverages verified "Ground Truth" data for high-accuracy few-shot translation of complex humanitarian content.
 - **Smart Image Processing**: 
@@ -22,11 +23,13 @@
   - **Text Export**: Simple `.txt` download for raw content.
   - Uses native **File System Access API** for reliable file saving.
 - **User Accounts**: Supabase integration for secure user authentication and activity logging.
-- **Privacy & Training**: Support for local-only **Golden Reference Datasets** to improve translation accuracy for complex scripts (Tamil, Telugu, Amharic) without cloud exposure.
+- **Privacy & Training**: 
+  - **Smart Model Toggle (Implemented)**: Deployed dynamic routing system (gemini-3.1-pro-preview vs gemini-3-flash-preview) to maintain accuracy for Tigrigna/Amharic while minimizing global costs.
+  - Support for local-only **Golden Reference Datasets** to improve translation accuracy for complex scripts (Tamil, Telugu, Amharic) without cloud exposure.
 
 ## Tech Stack
 - **Frontend**: React, TypeScript, Vite, TailwindCSS
-- **AI Service**: Google Gemini 3.1 (@google/generative-ai)
+- **AI Service**: Google Gemini 3 (@google/generative-ai)
 - **Backend/Auth**: Supabase
 - **PDF Generation**: jsPDF
 
@@ -71,6 +74,7 @@
 2. **Upload**: Drag & drop your letter image or PDF.
 3. **Pre-process**: Use the rotation tools to fix the image orientation if needed.
 4. **Translate**: Confirm the languages and click "Decipher with AI".
+   - **Gemini 3 Flash**: Assigned to all other languages (Spanish, French, etc.) for cost efficiency.
 5. **Edit & Export**: Review the results, make edits if necessary, and click "Export" to save your work as a PDF or Text file.
 
 ## License
