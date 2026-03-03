@@ -278,7 +278,19 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                pdfDoc.setFont("helvetica", "normal");
                pdfDoc.text(`Child Name: ${editedResult.headerInfo.childName || 'N/A'}`, margin, y);
                pdfDoc.text(`Child ID: ${idToDisplay}`, margin + 60, y);
-               pdfDoc.text(`Date: ${editedResult.headerInfo.date || 'N/A'}`, margin + 120, y);
+
+               // Handle parsing the AI-extracted date to 'Month Day, Year' and catching literal "null"
+               let parsedDate = editedResult.headerInfo.date;
+               if (!parsedDate || parsedDate.trim().toLowerCase() === 'null') {
+                  parsedDate = 'N/A';
+               } else {
+                  const d = new Date(parsedDate);
+                  if (!isNaN(d.getTime())) {
+                     parsedDate = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                  }
+               }
+
+               pdfDoc.text(`Date: ${parsedDate}`, margin + 120, y);
                y += 10;
             }
 
@@ -441,7 +453,7 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                            onClick={handleSaveToHistory}
                            disabled={isSaving}
                            className={`flex items-center justify-center h-10 px-4 rounded-lg transition-colors text-sm font-bold shadow-sm ${isSaving ? 'bg-slate-100 text-slate-400' :
-                                 result._flagged ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-green-600 text-white hover:bg-green-700'
+                              result._flagged ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-green-600 text-white hover:bg-green-700'
                               }`}
                         >
                            <span className="material-symbols-outlined mr-2 text-[20px]">{isSaving ? 'sync' : (result._flagged ? 'warning' : 'save')}</span>
