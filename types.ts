@@ -13,6 +13,9 @@ export interface TranslationResult {
   confidenceScore?: number;
   ocrUsed?: boolean;
   rawOCR?: string;
+  _flagged?: boolean;
+  _flagReason?: string;
+  _modelUsed?: string;
 }
 
 export interface ChatMessage {

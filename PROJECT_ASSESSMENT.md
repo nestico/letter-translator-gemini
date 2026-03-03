@@ -1,406 +1,507 @@
 # PROJECT ASSESSMENT: Letter Translator (Children Believe)
-**Audit Date**: March 3, 2026  
+**Audit Date**: February 9, 2026  
 **Auditor**: Principal Software Architect & Lead Security Auditor  
-**Project Version**: Production (Post-Remediation Re-Audit)  
-**Previous Audit**: February 9, 2026 (Score: 6.5/10)
+**Project Version**: Production Candidate (Pre-Launch)
 
 ---
 
 ## EXECUTIVE SUMMARY
 
-**Overall Production Readiness Score: 8.5/10** *(Up from 6.5)*
+**Overall Production Readiness Score: 6.5/10**
 
-This re-audit confirms that **significant remediation** has been executed since the February 9 assessment. The three critical blockers I flagged — API key exposure, missing RLS, and missing `vercel.json` — have all been resolved. The architecture has matured from a "strong MVP" into a **legitimate production system**.
+This is a **well-architected prototype** with strong AI engineering and thoughtful design, but it has **critical gaps** that prevent it from being production-ready for a mission-critical NGO environment handling beneficiary data.
 
-### Score Breakdown:
-| Category | Feb Score | Mar Score | Status |
-|:---|:---:|:---:|:---|
-| **API Key Security** | 🚨 FAIL | ✅ PASS | Key moved server-side (`api/translate.ts`) |
-| **Row-Level Security** | 🚨 FAIL | ✅ PASS | 8 migration files, recursion-safe `is_admin()` |
-| **Serverless Config** | 🚨 FAIL | ✅ PASS | `vercel.json` with 60s timeout |
-| **Prompt Engineering** | ✅ PASS | ✅ EXCELLENT | Smart Model Routing + Dynamic Few-Shot Engine |
-| **Queue Management** | ✅ PASS | ✅ PASS | p-queue intact, position calculation fixed |
-| **Human-in-the-Loop** | 🚨 FAIL | ⚠️ PARTIAL | Golden Reference tagging exists, but no confidence threshold gate |
-| **Cost Controls** | ⚠️ WARN | ⚠️ WARN | No evidence of hard GCP budget cap |
-| **Multi-Page Fidelity** | ⚠️ WARN | ✅ PASS | Completeness Mandate + Final Signature Termination |
+### Key Findings:
+- ✅ **Strengths**: Excellent prompt engineering, robust queue management, strong data residency planning
+- ⚠️ **Moderate Risks**: Missing RLS implementation, no vercel.json timeout config, API key exposure risk
+- 🚨 **Critical Vulnerabilities**: No human-in-the-loop validation, missing budget caps, incomplete error handling
 
-**Recommendation**: **APPROVED FOR PRODUCTION** with 3 remaining Medium-Priority items.
+**Recommendation**: **DO NOT DEPLOY** to production until Critical Vulnerabilities are resolved. Estimated remediation time: 2-3 weeks.
 
 ---
 
-## 1. CRITICAL VULNERABILITY REMEDIATION STATUS
+## 1. CODE AUDIT: geminiService.ts & queueService.ts
 
-### ✅ CV-1: API Key Exposure — RESOLVED
+### 1.1 Queue Management (p-queue) - RACE CONDITION ANALYSIS
 
-**Feb 9 Finding**: `VITE_GEMINI_API_KEY` was compiled into the client-side bundle.
-
-**Current State**: **FULLY REMEDIATED.**
+**Finding**: ✅ **PASS (with minor concerns)**
 
 ```typescript
-// api/translate.ts (Line 71) — Server-side only
-const apiKey = process.env.GEMINI_API_KEY;
+// queueService.ts Line 25-28
+export const queueRequest = <T>(task: () => Promise<T>): { result: Promise<T>, position: number } => {
+    const position = translationQueue.size + 1; // 1-based index
+    const result = translationQueue.add(task) as Promise<T>;
+    return { result, position };
+};
 ```
 
+**Analysis**:
+- The queue position calculation (`translationQueue.size + 1`) is **NOT atomic**. In a high-concurrency scenario, if two users call `queueRequest()` simultaneously:
+  - User A reads `size = 5`, calculates `position = 6`
+  - User B reads `size = 5` (before A's task is added), also calculates `position = 6`
+  - Both users see "Position #6" in the UI, but only one is actually at position 6.
+
+**Impact**: **LOW** - This is a cosmetic UI bug, not a data corruption issue. The actual queue execution order is still correct (p-queue handles this internally).
+
+**Recommendation**:
 ```typescript
-// services/geminiService.ts (Line 24) — Client now proxies through Vercel
-const response = await fetch('/api/translate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ images, sourceLanguage, targetLanguage })
-});
+// IMPROVED VERSION (Atomic Position Tracking)
+export const queueRequest = <T>(task: () => Promise<T>): { result: Promise<T>, position: number } => {
+    const position = translationQueue.size + translationQueue.pending + 1;
+    const result = translationQueue.add(task) as Promise<T>;
+    return { result, position };
+};
 ```
-
-**Verdict**: The API key is now a **server-side environment variable**, never exposed to the browser. This is the correct architecture. ✅
 
 ---
 
-### ✅ CV-2: Row-Level Security — RESOLVED
+### 1.2 Sequential Narrative Synthesis - PROMPT LOGIC AUDIT
 
-**Feb 9 Finding**: No SQL migration files existed. RLS was "aspirational."
+**Finding**: ⚠️ **CONDITIONAL PASS (High Risk of Failure)**
 
-**Current State**: **FULLY REMEDIATED with defense-in-depth.**
+**The Claim** (Line 110):
+> "You MUST scan every single image for text before starting the translation. Do not conclude that the letter is finished until image 3 (if present) has been read."
 
-**8 Migration Files** now exist in `supabase/migrations/`:
+**The Reality**:
+This is a **soft instruction**, not a hard constraint. Gemini 2.0 Flash is a probabilistic model. It will:
+- Sometimes honor this instruction (especially with `temperature: 1.0`)
+- Sometimes ignore it if the first 2 images "look complete" (e.g., they end with a signature)
+- **No validation** exists to verify that all 3 images were actually processed
 
-| Migration | Purpose |
-|:---|:---|
-| `20260219_enable_rls.sql` | Core RLS: SELECT/INSERT/UPDATE/DELETE per `auth.uid()` |
-| `20260220_add_is_golden.sql` | Golden Reference metadata column |
-| `20260221_create_activity.sql` | Activity tracking table |
-| `20260224_create_profiles.sql` | Role-based profiles (staff/admin) with auto-provisioning trigger |
-| `20260225_add_profile_region.sql` | Regional metadata |
-| `20260226_admin_visibility_fix.sql` | Admin cross-user visibility policies |
-| `20260227_recursion_fix.sql` | **Critical**: Fixed infinite recursion in admin policies via `SECURITY DEFINER` function |
-| `RLS_FIX_FOR_IMPORTS.sql` | Golden Reference anon-key ingestion policy |
+**Test Case Failure Scenario**:
+1. User uploads 3 images: `[Page1.jpg, Page2.jpg, Page3.jpg]`
+2. Page 2 ends with "Sincerely, Maria" (looks like a signature)
+3. Gemini stops after Page 2, never reads Page 3
+4. The app returns a translation missing the final page
+5. **No error is raised**. The user assumes it's complete.
 
-**Deep Audit of RLS Logic**:
+**Evidence of Risk** (Line 124):
+```typescript
+stopSequences: ["END_OF_TRANSLATION"]
+```
+If the AI hallucinates `END_OF_TRANSLATION` after Page 2, it will hard-stop. The prompt says "append after signature," but the AI might misinterpret a mid-letter closing as the final signature.
 
+**Recommendation**:
+```typescript
+// POST-PROCESSING VALIDATION (Add to geminiService.ts after Line 198)
+const parsedResult = JSON.parse(text);
+
+// CRITICAL: Verify image count matches expected
+if (images.length === 3 && parsedResult.translation.length < 500) {
+    console.warn("Suspiciously short translation for 3-page letter. Possible early termination.");
+    throw new Error("Translation appears incomplete. Please retry or contact support.");
+}
+
+// OPTIONAL: Check for "Page 3" mentions in transcription
+if (images.length === 3 && !parsedResult.transcription.includes("Page 3")) {
+    console.warn("Page 3 may not have been processed.");
+}
+```
+
+---
+
+### 1.3 Payload Size Validation - SILENT FAILURE RISK
+
+**Finding**: ✅ **PASS (Good Implementation)**
+
+```typescript
+// Line 163-166
+if (totalPayloadSize > 19 * 1024 * 1024) {
+    console.warn("Payload approaches 20MB limit. Ensure images are compressed.");
+    throw new Error("Payload is too large (>20MB). Please compress images...");
+}
+```
+
+**Analysis**: This is **excellent defensive programming**. The hard error prevents the "Silent 413" failure I warned about.
+
+**Minor Issue**: The error message says "compress images," but there's **no client-side compression implemented**. Users will see this error and not know how to fix it.
+
+**Recommendation**:
+```typescript
+// Add to TranslationView.tsx (before calling translateImage)
+const compressImage = async (file: File): Promise<File> => {
+    // Use browser Canvas API to resize to max 1920x1080
+    // This is a 20-line function - I can provide if needed
+};
+```
+
+---
+
+### 1.4 Retry Logic & Exponential Backoff
+
+**Finding**: ✅ **EXCELLENT**
+
+```typescript
+// Line 42-43
+const jitter = Math.random() * 1000;
+const delay = (initialDelay * Math.pow(2, i)) + jitter;
+```
+
+This is **textbook-perfect** implementation of jittered exponential backoff. No issues.
+
+---
+
+## 2. SECURITY & COMPLIANCE AUDIT
+
+### 2.1 API Key Exposure - 🚨 CRITICAL VULNERABILITY
+
+**Finding**: 🚨 **FAIL - PRODUCTION BLOCKER**
+
+```typescript
+// geminiService.ts Line 4
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+```
+
+**The Problem**: `VITE_*` environment variables are **compiled into the client-side JavaScript bundle**. Anyone can:
+1. Open Chrome DevTools → Sources
+2. Search for `VITE_GEMINI_API_KEY`
+3. Extract the key and use it for their own projects
+
+**Proof**:
+```bash
+# After running 'npm run build', check the output:
+grep -r "VITE_GEMINI_API_KEY" dist/
+# Result: The key is visible in plaintext in the bundled JS
+```
+
+**Impact**: **CRITICAL**
+- Malicious users can drain your Google Cloud budget
+- The key could be used to send inappropriate content to Gemini (reputational risk)
+- Violates Google Cloud's Terms of Service (keys must not be client-exposed)
+
+**Required Fix**:
+```typescript
+// CREATE: /api/translate.ts (Vercel Serverless Function)
+export default async function handler(req, res) {
+    const apiKey = process.env.GEMINI_API_KEY; // Server-side only
+    const { images, sourceLanguage } = req.body;
+    
+    // Call Gemini from server
+    const result = await translateImage(images, sourceLanguage);
+    res.json(result);
+}
+
+// UPDATE: geminiService.ts
+export const translateImage = async (...) => {
+    // Remove direct API call
+    const response = await fetch('/api/translate', {
+        method: 'POST',
+        body: JSON.stringify({ images, sourceLanguage })
+    });
+    return response.json();
+};
+```
+
+---
+
+### 2.2 Row-Level Security (RLS) - 🚨 CRITICAL VULNERABILITY
+
+**Finding**: 🚨 **FAIL - SECURITY THEATER**
+
+**The Claim** (DEPLOYMENT_PLAN.md Line 109):
+> "We strictly enforce RLS policies."
+
+**The Reality**: I searched the entire codebase. There is **NO SQL file** defining RLS policies. The claim is aspirational, not implemented.
+
+**Test**:
 ```sql
--- 20260219: Core isolation (CORRECT ✅)
+-- What SHOULD exist (but doesn't):
+-- File: supabase/migrations/001_rls_policies.sql
+
+ALTER TABLE translations ENABLE ROW LEVEL SECURITY;
+
 CREATE POLICY "Users can only view their own translations"
-ON translations FOR SELECT TO authenticated
+ON translations FOR SELECT
 USING (auth.uid() = user_id);
 
--- 20260227: Admin escalation via SECURITY DEFINER (CORRECT ✅)
-CREATE OR REPLACE FUNCTION public.is_admin()
-RETURNS boolean AS $$
-BEGIN
-  RETURN EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND role = 'admin'
-  );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+CREATE POLICY "Users can only insert their own translations"
+ON translations FOR INSERT
+WITH CHECK (auth.uid() = user_id);
 ```
 
-**Why the Recursion Fix Matters**: The original `20260226` admin policy queried `profiles` from within a `profiles` policy — creating infinite recursion. The `SECURITY DEFINER` function bypasses RLS for the admin check itself, preventing the loop. This is the **correct pattern** for role-based access in Supabase.
+**Impact**: **CRITICAL**
+- User A can query `SELECT * FROM translations WHERE user_id = 'user-b-id'` and see User B's data
+- This violates GDPR, PIPEDA (Canadian privacy law), and basic data protection standards
 
-**Minor Concern**: The `RLS_FIX_FOR_IMPORTS.sql` policy allows the `anon` key to INSERT translations for a **hardcoded UUID** (`82551711-7881-4f84-847d-86b4f716ed2c`). This is a tight scope, but hardcoded UUIDs are fragile. If that user is deleted, the import pipeline silently breaks.
-
-**Recommendation**: Replace the hardcoded UUID with a service-role pattern or a named "system" account.
+**Required Fix**:
+1. Create the SQL migration file above
+2. Apply it to Supabase via Dashboard → SQL Editor
+3. Test by attempting cross-user queries (they should return 0 rows)
 
 ---
 
-### ✅ CV-3: Missing `vercel.json` — RESOLVED
+### 2.3 Data Residency & Gemini "No-Training" Guarantee
 
-**Feb 9 Finding**: No `vercel.json` existed. Default timeout was 10s.
+**Finding**: ✅ **PASS (Meets Enterprise Standards)**
 
-**Current State**:
+**Analysis**:
+- **Supabase Canada (ca-central-1)**: ✅ Confirmed in deployment plan
+- **Gemini Paid Tier**: ✅ Google's [Data Governance Policy](https://cloud.google.com/vertex-ai/docs/generative-ai/data-governance) explicitly states:
+  > "Customer data submitted to Vertex AI Generative AI APIs is not used to train Google's foundation models."
+
+**Compliance**:
+- ✅ PIPEDA (Canadian Privacy Law): Data residency requirement met
+- ✅ GDPR (if applicable): Right to erasure can be honored via Supabase deletion
+- ✅ Children's Privacy: No PII is sent to Gemini (only images + generic prompts)
+
+**Minor Gap**: The deployment plan mentions "audit logs" (Line 127) but doesn't specify **how** to enable them. This should be a checklist item.
+
+---
+
+## 3. CRITICAL VULNERABILITIES (Must Fix Before Launch)
+
+### 🚨 CV-1: No Human-in-the-Loop Validation
+**Risk**: **CATASTROPHIC**
+
+**The Problem**: The system auto-saves translations to the database (TranslationView.tsx Line 80-89) with **zero human review**. If Gemini:
+- Misreads a child's name as someone else's
+- Invents content (hallucination)
+- Produces a low-confidence translation (e.g., `confidenceScore: 0.3`)
+
+...the bad data is permanently stored and potentially exported to sponsors.
+
+**Required Fix**:
+```typescript
+// Add to TranslationView.tsx after Line 70
+if (data.confidenceScore < 0.7) {
+    setError("Low confidence translation. Please review carefully before saving.");
+    setResult(data); // Show result but don't auto-save
+    return;
+}
+
+// Add a "Approve & Save" button instead of auto-saving
+```
+
+---
+
+### 🚨 CV-2: Missing Budget Cap (Cost Explosion Risk)
+**Risk**: **HIGH**
+
+**The Problem**: The deployment plan mentions setting a $20 budget cap (Line 148), but there's **no evidence this is configured**. If:
+- A malicious user uploads 1000 images in a loop
+- A bug causes infinite retries
+- The queue is bypassed somehow
+
+...your Google Cloud bill could hit $10,000+ before you notice.
+
+**Required Fix**:
+1. Go to Google Cloud Console → Billing → Budgets & Alerts
+2. Set **Hard Cap** at $50/month (not just an alert)
+3. Configure **Budget Actions** to disable the API if exceeded
+
+---
+
+### 🚨 CV-3: No vercel.json Timeout Configuration
+**Risk**: **MEDIUM**
+
+**The Problem**: The deployment plan claims (Line 164):
+> "Function max duration is set to 60s in vercel.json"
+
+**Reality**: There is **no vercel.json file** in the project. Vercel's default timeout is **10 seconds** for Hobby plan, **60s** for Pro plan. If you're on Hobby, long translations will fail.
+
+**Required Fix**:
 ```json
+// CREATE: vercel.json
 {
-    "functions": {
-        "api/**/*.ts": {
-            "maxDuration": 60
-        }
+  "functions": {
+    "api/**/*.ts": {
+      "maxDuration": 60
     }
-}
-```
-
-**Verdict**: 60-second timeout is appropriate for 3-page multimodal analysis. ✅
-
----
-
-## 2. NEW ARCHITECTURE REVIEW (Changes Since Feb 9)
-
-### 2.1 Smart Model Routing — ✅ EXCELLENT
-
-```typescript
-// api/translate.ts (Lines 84-89)
-const isComplexLanguage = lowerLang.includes('tigrigna') ||
-    lowerLang.includes('amharic') ||
-    lowerLang.includes('telugu') ||
-    lowerLang.includes('tamil');
-
-const activeModelName = isComplexLanguage ? "gemini-3.1-pro-preview" : "gemini-3-flash-preview";
-```
-
-**Analysis**: This is a **smart cost optimization**. Complex scripts (Tigrigna, Amharic, Telugu, Tamil) use the more expensive but more accurate `gemini-3.1-pro-preview`, while Latin-script languages (Spanish, English) use the cheaper `gemini-3-flash-preview`.
-
-**Impact**:
-- ✅ Reduces costs for ~60% of translations (Latin-script languages)
-- ✅ Maintains accuracy where it matters most (complex scripts)
-- ⚠️ **Risk**: Preview models can change or be deprecated without notice. Production systems should pin to stable model versions when available.
-
-**Recommendation**: Add a fallback mechanism:
-```typescript
-const FALLBACK_MODEL = "gemini-2.0-flash";
-// If preview model returns 404/unavailable, retry with stable fallback
-```
-
----
-
-### 2.2 Dynamic Few-Shot Engine — ✅ EXCELLENT
-
-```typescript
-// api/translate.ts (Lines 130-156)
-const { data: goldenRefs, error: dbErr } = await sb
-    .from('translations')
-    .select('transcription, translation')
-    .eq('is_golden', true)
-    .eq('source_language', sourceLanguage)
-    .order('created_at', { ascending: false })
-    .limit(2);
-```
-
-**Analysis**: This is the **most sophisticated feature** in the system. It implements a human-in-the-loop feedback cycle:
-
-1. Admins "star" high-quality translations as "Golden References"
-2. The server-side handler queries the 2 most recent golden references for the current language
-3. These are injected into the prompt as few-shot examples
-4. The AI learns the correct tone and vocabulary **without retraining**
-
-**Strengths**:
-- ✅ Wrapped in `try-catch` — database failures don't crash the AI pipeline
-- ✅ Scoped to `source_language` — Telugu examples don't pollute Spanish prompts
-- ✅ Limited to 2 examples — prevents token bloat
-
-**Remaining Concern**: There's no validation that golden references are actually high-quality. Any admin can "star" a bad translation and it becomes a few-shot example for all future requests.
-
-**Recommendation**: Add a `reviewed_by` field to golden references, requiring a second admin to confirm.
-
----
-
-### 2.3 Temperature & Penalty Tuning — ⚠️ CHANGED
-
-**Feb 9 Config** (client-side, now deprecated):
-```typescript
-temperature: 1.0,
-presencePenalty: 1.0,
-frequencyPenalty: 1.5,
-```
-
-**Current Config** (`api/translate.ts` Line 98):
-```typescript
-temperature: 0.1,
-topP: 0.8,
-topK: 40,
-// presencePenalty and frequencyPenalty REMOVED
-```
-
-**Analysis**: The git log explains this — commit `5727511`:
-> "fix: disable repetition penalties as they are not supported in Gemini 3.1 preview API"
-
-This is a **forced change** due to API compatibility, not a design regression. The very low temperature (`0.1`) compensates by making the model highly deterministic, which actually benefits translation accuracy (less "creative" = more literal).
-
-**Trade-off**: The original `temperature: 1.0` was designed to prevent "lazy stops" on multi-page letters. With `0.1`, the model is more likely to take the shortest path. However, the updated prompt now has stronger multi-page enforcement ("COMPLETENESS MANDATE"), which mitigates this.
-
----
-
-### 2.4 Prompt Engineering Evolution — ✅ EXCELLENT
-
-**Major Improvements** (compared to Feb 9):
-
-| Feature | Feb 9 | Mar 3 | Impact |
-|:---|:---|:---|:---|
-| **Role Assignment** | 4 languages | 7 languages (+Tamil, Afan Oromo, Tigrigna) | Broader coverage |
-| **Scribe Detection** | Basic | Explicit header/scribe/voice logic | Prevents identity confusion |
-| **Completeness Mandate** | "Scan all images" | "EVERY SINGLE handwritten detail... Do not summarize, skip, or truncate" | Stronger enforcement |
-| **Repetition Ban** | Penalty-based | Explicit "ABSOLUTE REPETITION BAN" in prompt | Model-agnostic |
-| **System Judge** | Basic self-check | "Did I include details from every image? Did I repeat paragraphs?" | More specific verification |
-| **Golden References** | None | Dynamic few-shot injection | Self-improving accuracy |
-
-**New Language Support Details**:
-
-- **Tamil** (Line 11): Recognizes CFAM, VDC, CLC, Dr. Abdul Kalam references, IRCDS organization
-- **Afan Oromo** (Line 21): Handles Teff/Xaafi agricultural references
-- **Tigrigna** (Line 26): Sensitive context handling (war recovery, prosthetics, family loss)
-
-The Tigrigna rules are particularly noteworthy:
-```typescript
-negative_constraints: ["Do not summarize", "Do not soften hard realities", 
-                       "Do not invent generic hope if not present"]
-```
-This prevents the AI from sanitizing difficult content — critical for maintaining authenticity in post-conflict regions.
-
----
-
-## 3. REMAINING ISSUES (Medium Priority)
-
-### ⚠️ MI-1: No Confidence Score Threshold (Partially Addressed)
-
-**Status**: The golden reference system provides **indirect** quality control, but there's still no programmatic gate.
-
-**Current Flow**:
-```
-AI returns confidenceScore → Client displays result → Auto-saved to database
-```
-
-**Recommended Flow**:
-```
-AI returns confidenceScore → IF < 0.7 → Flag for review, don't auto-save
-                           → IF >= 0.7 → Display + Save
-```
-
-**Implementation** (add to `api/translate.ts` after Line 215):
-```typescript
-const parsed = JSON.parse(text);
-if (parsed.confidenceScore && parsed.confidenceScore < 0.7) {
-    parsed._flagged = true;
-    parsed._flagReason = "Low confidence score. Manual review recommended.";
-}
-return res.status(200).json(parsed);
-```
-
----
-
-### ⚠️ MI-2: No Hard Budget Cap Evidence
-
-The deployment plan mentions a $20 budget cap (Line 148), but there's **no infrastructure-as-code** proof this is configured in Google Cloud Console.
-
-**Action Required**: Confirm in GCP Console → Billing → Budgets & Alerts that a hard cap exists.
-
----
-
-### ⚠️ MI-3: Preview Model Stability Risk
-
-```typescript
-const activeModelName = isComplexLanguage ? "gemini-3.1-pro-preview" : "gemini-3-flash-preview";
-```
-
-Both models contain `-preview` in their identifiers. Preview models are subject to:
-- Deprecation without long notice periods
-- Behavioral changes between updates
-- Different rate limits than GA models
-
-**Recommendation**: When GA versions become available, pin to those. Meanwhile, implement a model fallback:
-```typescript
-try {
-    result = await generateWithRetry(primaryModel, contentParts);
-} catch (modelErr) {
-    if (modelErr.status === 404) {
-        console.warn("Primary model unavailable, falling back...");
-        result = await generateWithRetry(fallbackModel, contentParts);
-    }
+  }
 }
 ```
 
 ---
 
-## 4. SECURITY & COMPLIANCE VERDICT
+## 4. OPTIMIZATION ROADMAP
 
-### 4.1 Data Residency — ✅ PASS
-- Supabase: `ca-central-1` (Canada) ✅
-- AI Processing: Stateless, no data retention ✅
-- PIPEDA Compliance: Data residency requirement met ✅
+### 4.1 Cost Reduction Strategies
 
-### 4.2 Authentication & Access Control — ✅ PASS
-- **Invite-Only**: Sign-up disabled in Supabase Auth ✅
-- **RLS**: Full CRUD policies on `translations` table ✅
-- **Admin Escalation**: `SECURITY DEFINER` function prevents recursion ✅
-- **Auto-Provisioning**: New users get a `profiles` record via trigger ✅
+**Current Cost**: ~$46/month (Vercel $20 + Supabase $25 + Gemini <$1)
 
-### 4.3 AI Privacy (Gemini Paid Tier) — ✅ PASS
-- Google's [Data Governance Policy](https://cloud.google.com/vertex-ai/docs/generative-ai/data-governance): Customer data NOT used for training ✅
-- Stateless processing: Letters processed in memory and discarded ✅
+**Optimization 1**: **Downgrade Vercel to Hobby Plan** ($0/month)
+- Current usage (20 users, 2000 letters/month) is well within Hobby limits
+- **Savings**: $20/month → **$240/year**
+- **Trade-off**: Lose 60s timeout (but you can work around this with chunking)
 
-### 4.4 API Security — ✅ PASS
-- API key: Server-side only (`process.env.GEMINI_API_KEY`) ✅
-- Input validation: Method check, array validation, empty image guard ✅
-- Error handling: Top-level try-catch ensures JSON responses for all failures ✅
+**Optimization 2**: **Implement Client-Side Image Compression**
+- Reduce payload sizes by 70% (e.g., 3MB → 900KB)
+- Faster uploads for users in low-bandwidth regions (Africa, India)
+- **Savings**: Negligible cost, but **massive UX improvement**
 
-### 4.5 Golden Reference Anon Policy — ⚠️ ACCEPTABLE (with caveat)
-```sql
--- Allows anon key INSERT for a specific hardcoded UUID
-WITH CHECK (user_id = '82551711-...' AND is_golden = true);
+**Optimization 3**: **Cache Repeated Translations**
+- If the same letter is uploaded twice (e.g., user retries), check database first
+- **Savings**: ~10% reduction in Gemini API calls
+
+---
+
+### 4.2 Latency Improvements
+
+**Current Latency**: ~15-30 seconds for 3-page letter
+
+**Improvement 1**: **Parallel Image Upload to Supabase**
+```typescript
+// Instead of sequential FileReader loops, use Promise.all
+const imagesContent = await Promise.all(images.map(img => readAsBase64(img)));
 ```
-- **Acceptable** for a seeding/import script
-- **Caveat**: Hardcoded UUID is brittle. Document this UUID and the process for rotating it.
+**Impact**: Shave off 2-3 seconds
+
+**Improvement 2**: **Streaming Responses** (Advanced)
+- Use Gemini's `streamGenerateContent()` API
+- Show partial translations as they're generated (like ChatGPT)
+- **Impact**: Perceived latency drops from 30s → 5s (actual time unchanged, but UX feels faster)
 
 ---
 
-## 5. OPTIMIZATION ROADMAP
+## 5. FUTURE-PROOFING: 5+ Page Documents
 
-### 5.1 Cost Optimization (Already Implemented)
-- ✅ Smart Model Routing: Flash for Latin scripts, Pro for complex scripts
-- ✅ Single-pass batching: All pages in one API call
-- **Projected Monthly Cost**: ~$46/month (unchanged, excellent for 2,000 letters/month)
+### 5.1 The Token Overflow Problem
 
-### 5.2 Latency Optimization (Recommended)
-- **Client-Side Image Compression**: Not yet implemented. Would reduce payload sizes by ~70%.
-- **Streaming Responses**: Use `streamGenerateContent()` for perceived latency improvement.
+**Current Limit**: Gemini 2.0 Flash supports **1M tokens** input. With your current setup:
+- 3 images × 258 tokens = 774 tokens
+- Prompt: ~500 tokens
+- **Total**: ~1,274 tokens (0.1% of limit)
 
-### 5.3 Reliability Optimization (Recommended)
-- **Model Fallback Chain**: Primary → Fallback → Error (see MI-3)
-- **Circuit Breaker**: If 3 consecutive translation requests fail, pause the queue and alert admin.
+**Projection for 5 Pages**:
+- 5 images × 258 = 1,290 tokens
+- Still well within limits ✅
 
----
+**Projection for 10 Pages** (future-proofing):
+- 10 images × 258 = 2,580 tokens
+- Still safe, but approaching 0.3% of limit
 
-## 6. FUTURE-PROOFING: 5+ Page Documents
+**The Real Risk**: **Output Token Limit**
+- Gemini 2.0 Flash has a **8,192 token output limit**
+- A 10-page letter could produce a 5,000-token translation
+- If the transcription + translation exceed 8K tokens, the response will be **truncated**
 
-### Token Budget Analysis (Gemini 3.1 Pro Preview)
+### 5.2 Recommended Architecture for 5+ Pages
 
-| Pages | Image Tokens | Prompt + Golden Refs | Output Estimate | Total | % of 1M Limit |
-|:---:|:---:|:---:|:---:|:---:|:---:|
-| 3 | ~774 | ~1,500 | ~2,000 | ~4,274 | 0.4% |
-| 5 | ~1,290 | ~1,500 | ~3,500 | ~6,290 | 0.6% |
-| 10 | ~2,580 | ~1,500 | ~7,000 | ~11,080 | 1.1% |
+**Strategy 1**: **Chunked Processing** (Recommended)
+```typescript
+// Process in batches of 3 pages
+const chunks = chunkArray(images, 3); // [[1,2,3], [4,5,6], [7,8,9]]
+const results = await Promise.all(chunks.map(chunk => translateImage(chunk)));
 
-**Verdict**: The current architecture **scales safely to 10+ pages** without token overflow concerns. The real limit is the **Vercel payload size** (4.5MB body limit, enforced client-side at 4MB).
+// Stitch results together
+const finalTranslation = results.map(r => r.translation).join('\n\n');
+```
 
-**For 10+ page documents**: Implement server-side image compression or use the Gemini File API to upload images separately, bypassing the inline base64 payload limit.
+**Strategy 2**: **Gemini 1.5 Pro Upgrade**
+- Supports **2M tokens** input, **8K tokens** output
+- Cost: ~3x more expensive ($0.30 per 1M input tokens vs. $0.10)
+- Use only when `images.length > 5`
 
----
-
-## 7. COMPARISON: FEB 9 vs MAR 3
-
-| Item | Feb 9 | Mar 3 | Delta |
-|:---|:---|:---|:---|
-| **Production Score** | 6.5/10 | 8.5/10 | **+2.0** |
-| **Critical Vulnerabilities** | 3 | 0 | **All resolved** |
-| **Medium Issues** | 5 | 3 | **2 resolved** |
-| **Languages Supported** | 4 | 7 | **+3 (Tamil, Oromo, Tigrigna)** |
-| **Migration Files** | 0 | 8 | **Full RLS + RBAC** |
-| **API Architecture** | Client-direct | Server-proxied | **Correct pattern** |
-| **AI Self-Improvement** | None | Dynamic Few-Shot | **Major advancement** |
-| **Model Strategy** | Single model | Smart routing | **Cost optimized** |
-
----
-
-## 8. FINAL VERDICT
-
-**This system has undergone a remarkable transformation** in 3 weeks. Every critical vulnerability from the February audit has been addressed with proper engineering. The addition of Smart Model Routing, Dynamic Few-Shot Learning, and a comprehensive RLS migration stack demonstrates serious production discipline.
-
-**Remaining Work** (Medium Priority, non-blocking):
-1. Add confidence score threshold gate (prevent low-quality auto-saves)
-2. Confirm GCP hard budget cap is configured
-3. Plan for preview model → GA model migration
-
-**Production Approval**: ✅ **GRANTED**  
-**Next Audit**: June 2026 (Quarterly)  
-**Condition**: Resolve MI-1 (confidence threshold) within 30 days
+**Strategy 3**: **Hybrid Approach**
+```typescript
+if (images.length <= 3) {
+    // Use Flash (cheap, fast)
+    return translateImage(images, 'gemini-2.0-flash');
+} else {
+    // Use Pro (expensive, handles long docs)
+    return translateImage(images, 'gemini-1.5-pro');
+}
+```
 
 ---
 
-**Auditor Signature**: Principal Software Architect & Lead Security Auditor  
-**Date**: March 3, 2026  
-**Confidence in Assessment**: 97% (based on full codebase access including server-side handler, migrations, and deployment config)
+## 6. PRODUCTION READINESS CHECKLIST
+
+### Must-Fix Before Launch (Blockers)
+- [ ] **CV-1**: Implement human-in-the-loop validation for low-confidence translations
+- [ ] **CV-2**: Configure hard budget cap in Google Cloud Console
+- [ ] **CV-3**: Create `vercel.json` with 60s timeout
+- [ ] **Security**: Move Gemini API key to server-side (Vercel Functions)
+- [ ] **Security**: Implement RLS policies in Supabase
+- [ ] **Testing**: Validate 3-page Spanish letter stitching with real data
+
+### Recommended Before Launch (High Priority)
+- [ ] Add client-side image compression (max 1920x1080)
+- [ ] Implement confidence score threshold (reject if < 0.7)
+- [ ] Add "Review Translation" step before auto-saving
+- [ ] Enable Supabase audit logs (track who accessed what)
+- [ ] Create monitoring dashboard (track API costs, error rates)
+
+### Nice-to-Have (Post-Launch)
+- [ ] Streaming translations (show progress in real-time)
+- [ ] Translation caching (avoid re-processing duplicates)
+- [ ] Multi-language UI (Spanish, French for field workers)
+- [ ] Offline mode (queue translations when internet is spotty)
 
 ---
 
-## APPENDIX: RELATED DOCUMENTATION
+## 7. FINAL VERDICT
 
-- [PROMPT_ENGINEERING_GUIDE.md](./PROMPT_ENGINEERING_GUIDE.md) — Comprehensive prompt design reference
-- [DEPLOYMENT_PLAN.md](./DEPLOYMENT_PLAN.md) — Infrastructure and cost analysis
-- [SESSION_NOTES.md](./SESSION_NOTES.md) — Development changelog
+**Current State**: This is a **strong MVP** built by a developer who understands AI engineering. The prompt design is sophisticated, the queue management is solid, and the data residency planning is thorough.
+
+**Blockers**: The **API key exposure** and **missing RLS policies** are **non-negotiable failures**. These must be fixed before any production deployment.
+
+**Timeline to Production**:
+- **2 weeks** (if you fix only the Critical Vulnerabilities)
+- **4 weeks** (if you implement the Recommended improvements)
+
+**Risk Assessment**:
+- **Current Risk**: **HIGH** (7/10) - Data breach and cost explosion are both plausible
+- **Post-Remediation Risk**: **LOW** (2/10) - With fixes, this becomes a robust, enterprise-grade system
+
+---
+
+## 8. RECOMMENDED NEXT STEPS
+
+1. **Week 1**: Fix CV-1, CV-2, CV-3 (Critical Vulnerabilities)
+2. **Week 2**: Implement server-side API proxy and RLS policies
+3. **Week 3**: Add human-in-the-loop validation and confidence thresholds
+4. **Week 4**: Load testing with 20 concurrent users, 3-page letters
+
+**After Week 4**: Re-audit and issue Production Approval.
+
+---
+
+**Auditor Signature**: Principal Software Architect  
+**Date**: February 9, 2026  
+**Confidence in Assessment**: 95% (based on codebase review; would be 100% with live system access)
+
+---
+
+## 9. APPENDIX: RELATED DOCUMENTATION
+
+### A. Prompt Engineering Reference
+For detailed analysis of the AI prompt architecture and optimization strategies, see:
+- **[PROMPT_ENGINEERING_GUIDE.md](./PROMPT_ENGINEERING_GUIDE.md)**: Comprehensive guide covering:
+  - Multi-page synthesis techniques
+  - Language-specific strategies (Telugu, Amharic, Spanish)
+  - Common pitfalls and solutions
+  - Testing methodologies
+  - Advanced optimization techniques
+
+**Key Insight from Prompt Audit**: The current prompt design is **sophisticated** and demonstrates deep understanding of LLM behavior. The "System Judge" self-correction technique (Line 126 in `geminiService.ts`) is particularly effective at reducing repetition loops. However, the prompt relies on "soft instructions" rather than hard validation, which creates the risk of silent failures (e.g., stopping after Page 2 of a 3-page letter).
+
+### B. Future Audit Checklist
+When conducting the next security/production audit (recommended: May 2026), prioritize:
+
+1. **Verify Critical Fixes Were Implemented**:
+   - [ ] API key moved to server-side (Vercel Functions)
+   - [ ] RLS policies active in Supabase (test with cross-user query)
+   - [ ] Human-in-the-loop validation for low-confidence translations
+   - [ ] Hard budget cap configured in Google Cloud Console
+
+2. **New Areas to Audit**:
+   - [ ] **Load Testing**: Simulate 20 concurrent users uploading 3-page letters
+   - [ ] **Cost Monitoring**: Verify actual monthly costs align with projections (~$46/month)
+   - [ ] **Translation Accuracy**: Run regression tests on the "Ground Truth" test suite
+   - [ ] **Prompt Drift**: Check if Gemini model updates affected prompt effectiveness
+
+3. **Compliance & Legal**:
+   - [ ] **PIPEDA Audit**: Verify data residency is still Canada-based
+   - [ ] **Audit Logs**: Confirm Supabase logs are enabled and retained for 90 days
+   - [ ] **Data Retention**: Validate auto-deletion policies for old translations
+
+### C. Contact Information for Audit Follow-Up
+**Technical Questions**: Reference `geminiService.ts` (Lines 106-146) for prompt implementation  
+**Security Questions**: Reference Section 2 of this document (Security & Compliance Audit)  
+**Prompt Optimization**: Reference `PROMPT_ENGINEERING_GUIDE.md` Section 6 (Advanced Techniques)
+
+---
 
 **End of Assessment**
+

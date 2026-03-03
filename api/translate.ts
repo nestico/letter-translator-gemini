@@ -213,6 +213,12 @@ export default async function handler(req: any, res: any) {
 
         try {
             const parsed = JSON.parse(text);
+
+            if (parsed.confidenceScore !== undefined && parsed.confidenceScore < 0.7) {
+                parsed._flagged = true;
+                parsed._flagReason = `Low confidence (${Math.round(parsed.confidenceScore * 100)}%). Please review carefully before saving.`;
+            }
+
             return res.status(200).json(parsed);
         } catch (jsonErr) {
             console.error("[Gemini] Invalid JSON returned from AI:", text);

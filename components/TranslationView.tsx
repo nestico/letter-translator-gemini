@@ -80,8 +80,17 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
          setEditedResult(data);
          setHasSaved(false); // Reset saved state for new result
 
-         if (data.confidenceScore < 0.7) {
+         if (data._flagged) {
+            // Require manual user intervention - do not auto-save.
+            console.log("Translation flagged due to low confidence. Waiting for user action.");
+            setError(null); // Clear main error state so results still show
+         } else if (data.confidenceScore && data.confidenceScore < 0.7 && !data._flagged) {
+            // Fallback for safety if backend flag didn't catch it
             setError("Warning: Low confidence translation. Some parts of the handwriting may be illegible or misinterpreted. Please review carefully before saving.");
+         } else {
+            // Only auto-save if NOT flagged
+            // We can trigger an auto-save here if we want, historically it seems it relies on user clicking 'Approve & Save'
+            // but if it ever did auto-save, we block it.
          }
 
          if (user) {
@@ -624,6 +633,20 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                   {/* Results Content */}
                   {result && editedResult && (
                      <div className="prose dark:prose-invert max-w-none relative">
+
+                        {/* Low Confidence Warning Banner */}
+                        {result._flagged && !hasSaved && (
+                           <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-lg p-4 mb-6 flex items-start gap-3">
+                              <span className="material-symbols-outlined text-amber-500 mt-0.5">warning</span>
+                              <div>
+                                 <h4 className="text-amber-800 dark:text-amber-400 font-bold m-0 pt-0 text-base">Translation Needs Review</h4>
+                                 <p className="text-amber-700 dark:text-amber-500 text-sm m-0 mt-1">
+                                    {result._flagReason || "The AI had difficulty reading parts of this handwriting. Please review the results closely."}
+                                 </p>
+                              </div>
+                           </div>
+                        )}
+
                         <div className="flex justify-between items-center mb-4">
                            <div className="flex items-center gap-3">
                               {result.detectedLanguage && (
