@@ -81,14 +81,26 @@ export default async function handler(req: any, res: any) {
         const lowerLang = (sourceLanguage || '').toLowerCase();
 
         // Use Pro for complex scripts, Flash for standard
+        const MODEL_CONFIG = {
+            complex: {
+                primary: "gemini-3.1-pro-preview",
+                fallback: "gemini-2.0-flash"
+            },
+            standard: {
+                primary: "gemini-3-flash-preview",
+                fallback: "gemini-2.0-flash"
+            }
+        };
+
         const isComplexLanguage = lowerLang.includes('tigrigna') ||
             lowerLang.includes('amharic') ||
             lowerLang.includes('telugu') ||
             lowerLang.includes('tamil');
 
-        const activeModelName = isComplexLanguage ? "gemini-3.1-pro-preview" : "gemini-3-flash-preview";
+        const activeModelChain = isComplexLanguage ? MODEL_CONFIG.complex : MODEL_CONFIG.standard;
+        let activeModelName = activeModelChain.primary;
 
-        console.log(`[Gemini API] Target: ${activeModelName} | Language: ${sourceLanguage} | Pages: ${images.length}`);
+        console.log(`[Gemini API] Primary Target: ${activeModelName} | Language: ${sourceLanguage} | Pages: ${images.length}`);
 
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
@@ -197,8 +209,27 @@ export default async function handler(req: any, res: any) {
             });
         });
 
-        const result = await generateWithRetry(model, contentParts);
-        const response = await result.response;
+        let result;
+        let response;
+        try {
+            result = await generateWithRetry(model, contentParts);
+            response = await result.response;
+        } catch (initialError: any) {
+            // Check for 404/Not Found indicating deprecated preview model
+            if (initialError.status === 404 || initialError.message?.includes('404') || initialError.message?.includes('models/')) {
+                console.warn(`[Gemini API] Primary model ${activeModelName} unavailable (404). Falling back to ${activeModelChain.fallback}...`, initialError.message);
+                activeModelName = activeModelChain.fallback;
+                const fallbackModel = genAI.getGenerativeModel({
+                    model: activeModelName,
+                    generationConfig: model.generationConfig
+                });
+                result = await generateWithRetry(fallbackModel, contentParts);
+                response = await result.response;
+            } else {
+                throw initialError; // Throw other errors (like auth, quota, etc.)
+            }
+        }
+
         let text = response.text();
 
         // Safety Force-Close JSON if truncated
@@ -218,6 +249,7 @@ export default async function handler(req: any, res: any) {
                 parsed._flagged = true;
                 parsed._flagReason = `Low confidence (${Math.round(parsed.confidenceScore * 100)}%). Please review carefully before saving.`;
             }
+            parsed._modelUsed = activeModelName;
 
             return res.status(200).json(parsed);
         } catch (jsonErr) {
