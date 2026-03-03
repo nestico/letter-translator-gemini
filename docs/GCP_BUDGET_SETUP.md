@@ -1,6 +1,6 @@
 # Google Cloud Platform (GCP) Budget Cap Setup
 
-This guide walks you through configuring a hard budget cap on your Google Cloud Project. This ensures that the Gemini API usage will never exceed $50/month, preventing unexpected billing overages.
+This guide walks you through configuring a hard budget cap on your Google Cloud Project. This ensures that the Gemini API usage will never exceed $150/month, preventing unexpected billing overages.
 
 ## Prerequisites
 
@@ -25,17 +25,17 @@ This guide walks you through configuring a hard budget cap on your Google Cloud 
 ## Step 3: Set Amount (The Cap)
 
 1. Under "Budget type", select **Specified amount**.
-2. **Target amount**: Enter `$50.00`.
-   *(Note: The projected spend for 2,000 letters is roughly $0.76/month. Setting the cap at $50 provides ample headroom for spikes while still offering a strict safety net).*
+2. **Target amount**: Enter `$150.00`.
+   *(Note: The projected spend for 2,000 letters is roughly $0.76/month. Setting the cap at $150 provides ample headroom for spikes while still offering a strict safety net).*
 3. Click **Next**.
 
 ## Step 4: Set Alert Thresholds
 
 Google will send emails at these usage marks.
-1. Add the following rules (percentages of your $50 budget):
-   - **50%** ($25.00)
-   - **90%** ($45.00)
-   - **100%** ($50.00)
+1. Add the following rules (percentages of your $150 budget):
+   - **50%** ($75.00)
+   - **90%** ($135.00)
+   - **100%** ($150.00)
 
 ## Step 5: Configure Hard Cap Action (Crucial Step)
 
@@ -61,7 +61,7 @@ By default, budgets in GCP only send *alerts*. To create a true "hard cap", we m
 *IT/Infrastructure managers should verify these steps are completed and initial.*
 
 - [ ] Budget created with name "Letter Translator - Gemini API Monthly Cap"
-- [ ] Hard cap amount set exactly at **$50/month**
+- [ ] Hard cap amount set exactly at **$150/month**
 - [ ] Alert thresholds confirmed at **50%, 90%, 100%**
 - [ ] Action configured to **Disable billing** or cap APIs at 100%
 - [ ] Notification emails configured for `nestico` and `ehernandez`
