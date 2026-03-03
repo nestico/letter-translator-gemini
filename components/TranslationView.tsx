@@ -440,10 +440,12 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                         <button
                            onClick={handleSaveToHistory}
                            disabled={isSaving}
-                           className={`flex items-center justify-center h-10 px-4 rounded-lg transition-colors text-sm font-bold shadow-sm ${isSaving ? 'bg-slate-100 text-slate-400' : 'bg-green-600 text-white hover:bg-green-700'}`}
+                           className={`flex items-center justify-center h-10 px-4 rounded-lg transition-colors text-sm font-bold shadow-sm ${isSaving ? 'bg-slate-100 text-slate-400' :
+                                 result._flagged ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-green-600 text-white hover:bg-green-700'
+                              }`}
                         >
-                           <span className="material-symbols-outlined mr-2 text-[20px]">{isSaving ? 'sync' : 'save'}</span>
-                           {isSaving ? 'Saving...' : 'Approve & Save'}
+                           <span className="material-symbols-outlined mr-2 text-[20px]">{isSaving ? 'sync' : (result._flagged ? 'warning' : 'save')}</span>
+                           {isSaving ? 'Saving...' : (result._flagged ? 'Confirm & Save Anyway' : 'Approve & Save')}
                         </button>
                      )}
                      {hasSaved && (
