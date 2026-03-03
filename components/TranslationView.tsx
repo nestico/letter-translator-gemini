@@ -214,123 +214,58 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
             const pageHeight = pdfDoc.internal.pageSize.getHeight();
             const contentWidth = pageWidth - (margin * 2);
 
-            const logoBase64 = await loadLogo();
+            let y = 25; // Initial top margin
 
-            // 1. ADD IMAGES (One per page)
-            for (let i = 0; i < images.length; i++) {
-               if (i > 0) pdfDoc.addPage();
-
-               // Add Custom File Name at top ONLY on first page
-               if (i === 0) {
-                  const displayFileName = exportFileName.trim().replace(/\.[^/.]+$/, "") || 'letter_translation';
-                  pdfDoc.setFontSize(10);
-                  pdfDoc.setFont("helvetica", "normal");
-                  pdfDoc.setTextColor(100);
-                  pdfDoc.text(`Child ID: ${displayFileName} | Pages: ${images.length}`, margin, 15);
-               }
-
-               // Add Logo small in corner
-               if (logoBase64) {
-                  pdfDoc.addImage(logoBase64, 'PNG', pageWidth - margin - 15, 8, 15, 15);
-               }
-
-               const { data: imgData, type: imgType } = await loadImageBase64(images[i].file);
-
-               // Calculate dimensions to fit 85% of page height
-               const imgProps = pdfDoc.getImageProperties(imgData);
-               const imgRatio = imgProps.width / imgProps.height;
-
-               let finalW = contentWidth;
-               let finalH = contentWidth / imgRatio;
-
-               const maxH = pageHeight - 40; // Leave room for headers/footers
-               if (finalH > maxH) {
-                  finalH = maxH;
-                  finalW = maxH * imgRatio;
-               }
-
-               const xCentered = margin + (contentWidth - finalW) / 2;
-               pdfDoc.addImage(imgData, imgType.includes('png') ? 'PNG' : 'JPEG', xCentered, 25, finalW, finalH);
-            }
-
-            // 2. ADD TRANSLATION (Starts on new page)
-            pdfDoc.addPage();
-            let y = 20;
-
-            // Logo on Translation Page
-            if (logoBase64) {
-               pdfDoc.addImage(logoBase64, 'PNG', margin, y, 20, 20);
-               y += 25;
-            }
-
-            pdfDoc.setFontSize(18);
+            // 1. ADD ID HEADER
+            const idToDisplay = exportFileName.trim().replace(/\.[^/.]+$/, "") || 'N/A';
+            pdfDoc.setFontSize(14);
             pdfDoc.setFont("helvetica", "bold");
             pdfDoc.setTextColor(0);
-            pdfDoc.text("Letter Translation", margin, y);
-            y += 12;
+            pdfDoc.text(`ID ${idToDisplay}`, margin, y);
+            y += 18; // Blank spacing before content
 
-            // PREPARE FONTS FOR CONTENT
+            // 2. PREPARE FONTS FOR MAIN CONTENT
             await registerFontsForLanguage(pdfDoc, editedResult.detectedLanguage || '');
-
-            if (editedResult.headerInfo) {
-               const idToDisplay = exportFileName.trim().replace(/\.[^/.]+$/, "") || 'N/A';
-               pdfDoc.setFontSize(10);
-               pdfDoc.setFont("helvetica", "normal");
-               pdfDoc.text(`Child Name: ${editedResult.headerInfo.childName || 'N/A'}`, margin, y);
-               pdfDoc.text(`Child ID: ${idToDisplay}`, margin + 60, y);
-               pdfDoc.text(`Date: ${editedResult.headerInfo.date || 'N/A'}`, margin + 120, y);
-               y += 10;
-            }
-
-            pdfDoc.setLineWidth(0.5);
-            pdfDoc.line(margin, y, pageWidth - margin, y);
-            y += 15;
 
             pdfDoc.setFontSize(12);
             pdfDoc.setFont("NotoSans", "normal");
-            pdfDoc.setTextColor(30);
+            pdfDoc.setTextColor(0);
 
-            // Use the full translation without sanitization
-            const translationText = (editedResult.translation || '')
-               .trim()
-               .replace(/\n{3,}/g, '\n\n');
+            // 3. PARSE AND ADD PARAGRAPHS
+            const translationText = (editedResult.translation || '').trim();
+            const paragraphs = translationText.split(/\n+/);
 
-            const splitTranslation = pdfDoc.splitTextToSize(translationText, contentWidth);
-
-            splitTranslation.forEach((line: string) => {
-               if (y > pageHeight - 30) {
-                  pdfDoc.addPage();
-                  y = 20;
+            paragraphs.forEach((paragraph: string) => {
+               // Only process non-empty paragraphs
+               if (paragraph.trim()) {
+                  const splitTranslation = pdfDoc!.splitTextToSize(paragraph, contentWidth);
+                  splitTranslation.forEach((line: string) => {
+                     if (y > pageHeight - 30) {
+                        pdfDoc!.addPage();
+                        y = 20;
+                     }
+                     pdfDoc!.text(line, margin, y);
+                     y += 7; // standard line height
+                  });
+                  y += 6; // Extra spacing between distinct paragraphs
                }
-               pdfDoc.text(line, margin, y);
-               y += 7;
             });
 
-
-            // "Below translation" ID Reference
+            // 4. ADD DATE AND TRANSLATOR SIGNATURE
             y += 10;
-            if (y > pageHeight - 20) {
-               pdfDoc.addPage();
-               y = 20;
-            }
-            pdfDoc.setFont("helvetica", "bold");
-            pdfDoc.setFontSize(10);
-            const idToDisplayBelow = exportFileName.trim().replace(/\.[^/.]+$/, "") || 'N/A';
-            pdfDoc.text(`Child ID: ${idToDisplayBelow}`, margin, y);
-
-            // Footer
-            y += 15;
-            if (y > pageHeight - 20) {
+            if (y > pageHeight - 30) {
                pdfDoc.addPage();
                y = 20;
             }
             const dateStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+            pdfDoc.setFont("helvetica", "normal");
+            pdfDoc.setFontSize(12);
+            pdfDoc.text(dateStr, margin, y);
+            y += 10;
+
             pdfDoc.setFont("helvetica", "italic");
-            pdfDoc.setFontSize(10);
-            pdfDoc.setTextColor(100);
-            pdfDoc.text(`Date Translated: ${dateStr}`, margin, y);
-            y += 5;
-            pdfDoc.text(`Translated by: ${translatorName || 'Children Believe AI'}`, margin, y);
+            pdfDoc.text(`Translated by ${translatorName || 'Children Believe AI'}`, margin, y);
 
          } catch (e) {
             console.error("PDF Logic Failure:", e);
@@ -441,7 +376,7 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                            onClick={handleSaveToHistory}
                            disabled={isSaving}
                            className={`flex items-center justify-center h-10 px-4 rounded-lg transition-colors text-sm font-bold shadow-sm ${isSaving ? 'bg-slate-100 text-slate-400' :
-                                 result._flagged ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-green-600 text-white hover:bg-green-700'
+                              result._flagged ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-green-600 text-white hover:bg-green-700'
                               }`}
                         >
                            <span className="material-symbols-outlined mr-2 text-[20px]">{isSaving ? 'sync' : (result._flagged ? 'warning' : 'save')}</span>
