@@ -34,6 +34,8 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
    const [isSaving, setIsSaving] = useState(false);
    const [hasSaved, setHasSaved] = useState(false);
    const [isExporting, setIsExporting] = useState(false);
+   const [programName, setProgramName] = useState('');
+   const [programCode, setProgramCode] = useState('');
 
    useEffect(() => {
       if (user?.name) {
@@ -291,7 +293,15 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                }
 
                pdfDoc.text(`Date: ${parsedDate}`, margin + 120, y);
-               y += 10;
+               y += 6;
+
+               // Program info row
+               if (programName || programCode) {
+                  pdfDoc.text(`Program: ${programName || 'N/A'}`, margin, y);
+                  pdfDoc.text(`Code: ${programCode || 'N/A'}`, margin + 80, y);
+                  y += 6;
+               }
+               y += 4;
             }
 
             pdfDoc.setLineWidth(0.5);
@@ -875,6 +885,32 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                            onChange={(e) => setTranslatorName(e.target.value)}
                            className="w-full h-12 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                            placeholder="Enter your name"
+                        />
+                     </div>
+
+                     <div className="flex flex-col gap-2">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                           Program Name
+                        </label>
+                        <input
+                           type="text"
+                           value={programName}
+                           onChange={(e) => setProgramName(e.target.value)}
+                           className="w-full h-12 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                           placeholder="e.g. Child Sponsorship"
+                        />
+                     </div>
+
+                     <div className="flex flex-col gap-2">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                           Program Code
+                        </label>
+                        <input
+                           type="text"
+                           value={programCode}
+                           onChange={(e) => setProgramCode(e.target.value)}
+                           className="w-full h-12 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                           placeholder="e.g. CS-IND-001"
                         />
                      </div>
 
