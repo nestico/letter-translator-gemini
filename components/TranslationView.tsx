@@ -278,9 +278,14 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                const idToDisplay = exportFileName.trim().replace(/\.[^/.]+$/, "") || 'N/A';
                pdfDoc.setFontSize(10);
                pdfDoc.setFont("helvetica", "normal");
-               pdfDoc.text(`Child Name: ${editedResult.headerInfo.childName || 'N/A'}`, margin, y);
-               pdfDoc.text(`Child ID: ${idToDisplay}`, margin + 60, y);
 
+               // Line 1: Program Name | Program Code | Child ID
+               pdfDoc.text(`Program: ${programName || 'N/A'}`, margin, y);
+               pdfDoc.text(`Code: ${programCode || 'N/A'}`, margin + 60, y);
+               pdfDoc.text(`Child ID: ${idToDisplay}`, margin + 120, y);
+               y += 6;
+
+               // Line 2: Child Name | Date
                // Handle parsing the AI-extracted date to 'Month Day, Year' and catching literal "null"
                let parsedDate = editedResult.headerInfo.date;
                if (!parsedDate || parsedDate.trim().toLowerCase() === 'null') {
@@ -292,16 +297,9 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                   }
                }
 
+               pdfDoc.text(`Child Name: ${editedResult.headerInfo.childName || 'N/A'}`, margin, y);
                pdfDoc.text(`Date: ${parsedDate}`, margin + 120, y);
-               y += 6;
-
-               // Program info row
-               if (programName || programCode) {
-                  pdfDoc.text(`Program: ${programName || 'N/A'}`, margin, y);
-                  pdfDoc.text(`Code: ${programCode || 'N/A'}`, margin + 80, y);
-                  y += 6;
-               }
-               y += 4;
+               y += 10;
             }
 
             pdfDoc.setLineWidth(0.5);
