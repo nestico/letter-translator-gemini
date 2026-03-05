@@ -297,7 +297,7 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                // Handle parsing the AI-extracted date to 'Month Day, Year' and catching literal "null"
                let parsedDate = editedResult.headerInfo.date;
                if (!parsedDate || parsedDate.trim().toLowerCase() === 'null') {
-                  parsedDate = 'N/A';
+                  parsedDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
                } else {
                   const d = new Date(parsedDate);
                   if (!isNaN(d.getTime())) {
