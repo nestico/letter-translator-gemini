@@ -279,10 +279,18 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                pdfDoc.setFontSize(10);
                pdfDoc.setFont("helvetica", "normal");
 
-               // Line 1: Program Name | Program Code | Child ID
-               pdfDoc.text(`Program: ${programName || 'N/A'}`, margin, y);
-               pdfDoc.text(`Code: ${programCode || 'N/A'}`, margin + 60, y);
-               pdfDoc.text(`Child ID: ${idToDisplay}`, margin + 120, y);
+               // Line 1: Program Name | Program ID | Child ID (labels bold, values normal)
+               const renderBoldLabel = (label: string, value: string, x: number, yPos: number) => {
+                  pdfDoc!.setFont("helvetica", "bold");
+                  pdfDoc!.text(label, x, yPos);
+                  const labelWidth = pdfDoc!.getTextWidth(label);
+                  pdfDoc!.setFont("helvetica", "normal");
+                  pdfDoc!.text(value, x + labelWidth + 1, yPos);
+               };
+
+               renderBoldLabel('Program Name: ', programName || 'N/A', margin, y);
+               renderBoldLabel('Program ID: ', programCode || 'N/A', margin + 65, y);
+               renderBoldLabel('Child ID: ', idToDisplay, margin + 120, y);
                y += 6;
 
                // Line 2: Child Name | Date
