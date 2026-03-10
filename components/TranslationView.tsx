@@ -134,13 +134,20 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
       }, 15000);
 
       try {
+         // Determine the final source language to save (prefer detected language over "Auto-Detect")
+         const finalSourceLang = (selectedLanguage === 'Auto-Detect' && editedResult.detectedLanguage)
+            ? editedResult.detectedLanguage
+            : selectedLanguage;
+
          const saved = await saveTranslation(
             user.id,
-            images[0].file.name,
+            exportFileName,
             editedResult.transcription,
             editedResult.translation,
-            editedResult.detectedLanguage || selectedLanguage,
-            targetLanguage
+            finalSourceLang,
+            targetLanguage,
+            images.map(img => img.file.name),
+            editedResult.headerInfo
          );
 
          if (saved) {

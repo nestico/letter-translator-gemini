@@ -51,6 +51,7 @@ export interface TranslationRecord {
   created_at: string;
   is_golden?: boolean;
   image_urls?: string[]; // To reference the images used for this translation
+  header_info?: any; // Contains scraped Child ID, Child Name, date, etc.
 }
 export interface ActivityRecord {
   id: string;

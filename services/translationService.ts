@@ -8,7 +8,8 @@ export const saveTranslation = async (
     translation: string,
     sourceLanguage: string,
     targetLanguage: string,
-    imageUrls: string[] = []
+    imageUrls: string[] = [],
+    headerInfo?: any
 ): Promise<TranslationRecord | null> => {
     try {
         const { data, error } = await supabase
@@ -21,7 +22,8 @@ export const saveTranslation = async (
                 source_language: sourceLanguage,
                 target_language: targetLanguage,
                 image_urls: imageUrls,
-                is_golden: false
+                is_golden: false,
+                header_info: headerInfo || null
             })
             .select()
             .single();
