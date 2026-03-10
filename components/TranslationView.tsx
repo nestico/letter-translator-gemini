@@ -279,7 +279,6 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                pdfDoc.setFontSize(10);
                pdfDoc.setFont("helvetica", "normal");
 
-               // Line 1: Program Name | Program ID | Child ID (labels bold, values normal)
                const renderBoldLabel = (label: string, value: string, x: number, yPos: number) => {
                   pdfDoc!.setFont("helvetica", "bold");
                   pdfDoc!.text(label, x, yPos);
@@ -288,12 +287,16 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                   pdfDoc!.text(value, x + labelWidth + 1, yPos);
                };
 
-               renderBoldLabel('Program Name: ', programName || 'N/A', margin, y);
-               renderBoldLabel('Program ID: ', programCode || 'N/A', margin + 65, y);
-               renderBoldLabel('Child ID: ', idToDisplay, margin + 120, y);
+               // Line 1: Child ID
+               renderBoldLabel('Child ID: ', idToDisplay, margin, y);
                y += 6;
 
-               // Line 2: Child Name | Date
+               // Line 2: Program Name | Program ID
+               renderBoldLabel('Program Name: ', programName || 'N/A', margin, y);
+               renderBoldLabel('Program ID: ', programCode || 'N/A', margin + 110, y);
+               y += 6;
+
+               // Line 3: Child Name | Date
                // Handle parsing the AI-extracted date to 'Month Day, Year' and catching literal "null"
                let parsedDate = editedResult.headerInfo.date;
                if (!parsedDate || parsedDate.trim().toLowerCase() === 'null') {
@@ -305,8 +308,8 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                   }
                }
 
-               pdfDoc.text(`Child Name: ${editedResult.headerInfo.childName || 'N/A'}`, margin, y);
-               pdfDoc.text(`Date: ${parsedDate}`, margin + 120, y);
+               renderBoldLabel('Child Name: ', editedResult.headerInfo.childName || 'N/A', margin, y);
+               renderBoldLabel('Date: ', parsedDate, margin + 110, y);
                y += 10;
             }
 
