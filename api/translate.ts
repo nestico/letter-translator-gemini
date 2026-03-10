@@ -191,7 +191,7 @@ export default async function handler(req: any, res: any) {
 
   **JSON STRUCTURE**:
   {
-    "headerInfo": { "childId": "...", "childName": "...", "date": "..." },
+    "headerInfo": { "childId": "...", "childName": "...", "date": "..." }, // IMPORTANT: "date" MUST be converted to English and formatted as YYYY-MM-DD (do NOT leave it in the source language).
     "transcription": "...",
     "translation": "English Only Text...",
     "detectedLanguage": "...",
