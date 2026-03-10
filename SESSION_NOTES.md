@@ -440,3 +440,25 @@
     - Final walkthrough/demo with stakeholders next week.
     - Monitor "Smart Routing" cost distribution in Google Cloud Console.
     - Verify PDF font rendering for the new Tigrigna samples.
+
+# Session Notes - March 10, 2026
+
+### 43. PDF Export Metadata & Formatting
+- **Objective**: Improve the presentation of Beneficiary data in the final PDF export.
+- **Implementation**:
+    - **New Fields**: Added `Program Name` and `Program ID` inputs to the Export Modal.
+    - **Header Restructuring**: Re-architected the PDF header into three distinct rows to prevent text overlap for long program names.
+    - **Styling**: Applied bold formatting to all header labels (`Child ID:`, `Program Name:`, etc.) for visual hierarchy.
+    - **Date Fallback**: Updated the date parser to automatically insert the current translation date if the AI extraction returns null.
+
+### 44. Data Persistence & History View Accuracy
+- **Objective**: Ensure that extracted details (Child Name, Child ID) and the actual detected source language render correctly in the qualitative History tab.
+- **Implementation**:
+    - **Database Schema**: Created `supabase/migrations/20260310_add_header_info.sql` to incrementally add a `header_info` JSONB column to the `translations` table.
+    - **Save Payload**: Refactored `translationService.ts` and `TranslationView.tsx` to include `headerInfo` and dynamically resolve "Auto-Detect" to the model's actual detected language before saving to the database.
+    - **Model Precision**: Implemented specific prompt constraints in `translate.ts` to force the AI to return dates exclusively in English YYYY-MM-DD format regardless of the source language writing.
+
+### 45. Documentation & Diagrams
+- **Objective**: Provide a clear visual map of the entire application architecture.
+- **Implementation**:
+    - Created `ARCHITECTURE_DIAGRAM.md` with a comprehensive Mermaid flow chart mapping the infrastructure from the React Frontend to the Vercel API, Gemini Router, and Supabase PostgreSQL.

@@ -28,8 +28,8 @@
 *   **Staff Impact Scoring**: Automated tracking of individual staff contributions and document processing volume.
 
 ### 3.4. Export & Workflow
-*   **PDF Generation**: Branded export of translated letters for delivery to sponsors.
-*   **History Logs**: Per-user audit trail of previous translations and activity.
+*   **PDF Generation**: Branded export of translated letters containing **Child ID**, **Program Name**, **Program Code**, original text, and English translation on separate lines for visual flow. Ensures date formats are translated to standard English schemas.
+*   **History Logs**: Per-user audit trail capturing the auto-detected language, and the accurately extracted **Beneficiary Name** and **Beneficiary ID**.
 
 ## 4. Technical Architecture
 *   **Frontend**: React (Vite) with a premium, responsive design system.

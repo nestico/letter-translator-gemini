@@ -19,13 +19,15 @@
   - Dual-pane view for comparing original text with the translation.
   - Editable transcription and translation fields for manual corrections.
 - **Robust Export Options**: 
-  - **PDF Export**: Generates a professional report containing the **Original Image**, **Translation**, and **Transcription**.
+  - **PDF Export**: Generates a professional report containing the **Child ID**, **Program Name**, **Program ID**, **Translation**, and **Transcription** on separated lines for visual clarity.
   - **Text Export**: Simple `.txt` download for raw content.
   - Uses native **File System Access API** for reliable file saving.
-- **User Accounts**: Supabase integration for secure user authentication and activity logging.
+- **User Accounts & History**: Supabase integration for secure user authentication. Visually tracks **Child Names**, **Child IDs**, and auto-detected languages directly inside a searchable History view.
 - **Privacy & Training**: 
-  - **Smart Model Toggle (Implemented)**: Deployed dynamic routing system (gemini-3.1-pro-preview vs gemini-3-flash-preview) to maintain accuracy for Tigrigna/Amharic while minimizing global costs.
-  - Support for local-only **Golden Reference Datasets** to improve translation accuracy for complex scripts (Tamil, Telugu, Amharic) without cloud exposure.
+  - **Smart Model Toggle**: Deployed dynamic routing system (gemini-3.1-pro-preview vs gemini-3-flash-preview) to maintain accuracy for Tigrigna/Amharic while minimizing global costs.
+  - Support for local-only **Golden Reference Datasets** to improve translation accuracy for complex scripts (Tamil, Telugu, Amharic).
+
+For a visual breakdown of the application architecture and data flow, see [ARCHITECTURE_DIAGRAM.md](ARCHITECTURE_DIAGRAM.md).
 
 ## Tech Stack
 - **Frontend**: React, TypeScript, Vite, TailwindCSS
