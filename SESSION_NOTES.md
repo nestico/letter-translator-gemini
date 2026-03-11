@@ -462,3 +462,15 @@
 - **Objective**: Provide a clear visual map of the entire application architecture.
 - **Implementation**:
     - Created `ARCHITECTURE_DIAGRAM.md` with a comprehensive Mermaid flow chart mapping the infrastructure from the React Frontend to the Vercel API, Gemini Router, and Supabase PostgreSQL.
+
+# Session Notes - March 11, 2026
+
+### 46. Stabilize API "Ghost Timeouts" (Vercel & Gemini)
+- **Objective**: Fix `FUNCTION_INVOCATION_TIMEOUT` errors that randomly occurred during multi-page image translations or complex script parsing.
+- **Root Cause**: The application was attempting to fall forward to non-existent Gemini 3 models (`gemini-3.1-pro-preview`), causing a `404 Not Found` API error block before falling back. This ~2 second delay combined with Vercel's strict stateless timeouts randomly killed long-running requests in the middle of generation.
+- **Implementation**:
+    - **Vercel Pro Limits**: Since the underlying Vercel account had been upgraded to Pro, created/updated `vercel.json` and `api/translate.ts` to explicitly declare `maxDuration: 300` (5 minutes), overriding Vercel's aggressive 10/60 second defaults.
+    - **Model Precision**: Adjusted the `MODEL_CONFIG` in `api/translate.ts`:
+        - Reverted primary complex router to `gemini-2.0-pro-exp-02-05` (the current SOTA for Amharic/Telugu handwriting).
+        - Reverted primary standard router to `gemini-2.0-flash`.
+    - **Impact**: Removed the 404 cascading delays and provided 5x the computation time headroom for the backend API, allowing dense 3-page, multi-lingual translations to finish without server disconnections.

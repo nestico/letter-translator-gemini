@@ -5,10 +5,10 @@
 
 ## Overview
 **Letter Translator** is an intelligent web application designed to help users decipher, transcribe, and translate handwritten documents. Whether it's an old family letter or a historical document, this tool leverages advanced AI models to convert difficult handwriting into clear, digital text and translate it into your preferred language.
-- **Implementation**: Upgraded core translation handler to `gemini-3-flash-preview`, improving both reasoning capability and long-term stability.
+- **Implementation**: Upgraded core translation handler to `gemini-2.0-pro-exp-02-05` and `gemini-2.0-flash`, eliminating server timeouts and ensuring high OCR stability.
 
 ## Key Features
-- **AI Engine**: Hybrid Google Gemini 3 (Dynamic routing between **Pro 3.1** for complex scripts and **Flash** for cost-efficiency).
+- **AI Engine**: Hybrid Google Gemini 2.0 (Dynamic routing between **Pro Experimental** for dense non-Latin scripts and **Flash** for speed/cost-efficiency).
 - **Multi-Language Support**: Auto-detects source language (Amharic, Tigrigna, Afan Oromo, Telugu, Tamil, Spanish, etc.) and translates to clear, modern English.
 - **Golden Reference Learning**: Leverages verified "Ground Truth" data for high-accuracy few-shot translation of complex humanitarian content.
 - **Smart Image Processing**: 
@@ -24,7 +24,7 @@
   - Uses native **File System Access API** for reliable file saving.
 - **User Accounts & History**: Supabase integration for secure user authentication. Visually tracks **Child Names**, **Child IDs**, and auto-detected languages directly inside a searchable History view.
 - **Privacy & Training**: 
-  - **Smart Model Toggle**: Deployed dynamic routing system (gemini-3.1-pro-preview vs gemini-3-flash-preview) to maintain accuracy for Tigrigna/Amharic while minimizing global costs.
+  - **Smart Model Toggle**: Deployed dynamic routing system (`gemini-2.0-pro-exp-02-05` vs `gemini-2.0-flash`) to eliminate invocation timeouts, maintain high OCR accuracy for Tigrigna/Amharic, and minimize global costs.
   - Support for local-only **Golden Reference Datasets** to improve translation accuracy for complex scripts (Tamil, Telugu, Amharic).
 
 For a visual breakdown of the application architecture and data flow, see [ARCHITECTURE_DIAGRAM.md](ARCHITECTURE_DIAGRAM.md).
@@ -76,7 +76,7 @@ For a visual breakdown of the application architecture and data flow, see [ARCHI
 2. **Upload**: Drag & drop your letter image or PDF.
 3. **Pre-process**: Use the rotation tools to fix the image orientation if needed.
 4. **Translate**: Confirm the languages and click "Decipher with AI".
-   - **Gemini 3 Flash**: Assigned to all other languages (Spanish, French, etc.) for cost efficiency.
+   - **Gemini 2.0 Flash**: Assigned to all other languages (Spanish, French, etc.) for cost efficiency.
 5. **Edit & Export**: Review the results, make edits if necessary, and click "Export" to save your work as a PDF or Text file.
 
 ## License

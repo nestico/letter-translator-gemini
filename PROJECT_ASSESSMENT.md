@@ -14,7 +14,7 @@ This final audit confirms the successful remediation of **all** critical blocker
 ### Final Readiness Checklist:
 - ✅ **API Key Security**: Server-side proxy (`api/translate.ts`)
 - ✅ **Row-Level Security**: Active (8 migrations, `is_admin` recursion safe)
-- ✅ **Gateway Stability**: `vercel.json` 60s timeout configured
+- ✅ **Gateway Stability**: `vercel.json` 300s timeout configured (Vercel Pro)
 - ✅ **Smart Model Routing**: Optimized fallback chain (Pro ↔ Flash)
 - ✅ **Human-in-the-Loop Validation**: Confidence-gated auto-saving via `_flagged`
 - ✅ **Cost Controls**: Documented GCP Hard Cap configuration
