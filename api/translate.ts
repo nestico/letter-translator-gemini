@@ -1,5 +1,12 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 
+// Vercel Serverless Function Configuration - explicitly forces 300s timeout limit (Vercel Pro max)
+// This prevents 10s default timeouts that abruptly kill the process for standard accounts.
+export const maxDuration = 300;
+export const config = {
+    maxDuration: 300
+};
+
 const LANGUAGE_SPECIFIC_RULES = {
     "Telugu": {
         role: "Telugu Script Expert",
@@ -83,12 +90,12 @@ export default async function handler(req: any, res: any) {
         // Use Pro for complex scripts, Flash for standard
         const MODEL_CONFIG = {
             complex: {
-                primary: "gemini-3.1-pro-preview",
+                primary: "gemini-2.0-pro-exp-02-05", // Highly competent OCR for dense exotic scripts
                 fallback: "gemini-2.0-flash"
             },
             standard: {
-                primary: "gemini-3-flash-preview",
-                fallback: "gemini-2.0-flash"
+                primary: "gemini-2.0-flash", // Extremely fast and cost-effective for Latin scripts
+                fallback: "gemini-1.5-flash"
             }
         };
 
