@@ -39,7 +39,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onBack }) =>
         try {
             setLoading(true);
             const data = await getAllTranslations();
-            const activity = await getGlobalActivity(200); // Higher limit for better 30-day summary
+            const activity = await getGlobalActivity(5000); // Huge limit to safely encompass all 30-day user activity
 
             if (!data) return;
 
