@@ -467,10 +467,34 @@
 
 ### 46. Stabilize API "Ghost Timeouts" (Vercel & Gemini)
 - **Objective**: Fix `FUNCTION_INVOCATION_TIMEOUT` errors that randomly occurred during multi-page image translations or complex script parsing.
-- **Root Cause**: The application was attempting to fall forward to non-existent Gemini 3 models (`gemini-3.1-pro-preview`), causing a `404 Not Found` API error block before falling back. This ~2 second delay combined with Vercel's strict stateless timeouts randomly killed long-running requests in the middle of generation.
+- **Root Cause**: The deprecated `gemini-3-flash-preview` model (shutdown March 9, 2026) was triggering 404 errors on the standard language route. The fallback handler caught these but the extra round-trip combined with Vercel's low default timeout killed long-running requests.
 - **Implementation**:
-    - **Vercel Pro Limits**: Since the underlying Vercel account had been upgraded to Pro, created/updated `vercel.json` and `api/translate.ts` to explicitly declare `maxDuration: 300` (5 minutes), overriding Vercel's aggressive 10/60 second defaults.
-    - **Model Precision**: Adjusted the `MODEL_CONFIG` in `api/translate.ts`:
-        - Reverted primary complex router to `gemini-2.0-pro-exp-02-05` (the current SOTA for Amharic/Telugu handwriting).
-        - Reverted primary standard router to `gemini-2.0-flash`.
-    - **Impact**: Removed the 404 cascading delays and provided 5x the computation time headroom for the backend API, allowing dense 3-page, multi-lingual translations to finish without server disconnections.
+    - **Vercel Pro Limits**: Updated `vercel.json` and `api/translate.ts` to declare `maxDuration: 300` (5 minutes), leveraging the Vercel Pro plan.
+    - **Standard Model Fix**: Replaced the deprecated `gemini-3-flash-preview` with stable `gemini-2.0-flash` for standard languages.
+    - **Impact**: Eliminated timeout errors and provided 5x computation headroom for dense multi-page translations.
+
+# Session Notes - March 16, 2026
+
+### 47. PDF Export "undefined" Error Fix
+- **Objective**: Resolve Pedro Rojas's reported "Error generating PDF: undefined" crash.
+- **Root Cause**: Two bugs found:
+    1. The error catch block cast exceptions as `(e as Error).message`, but jsPDF sometimes throws raw strings without a `.message` property, producing `undefined`.
+    2. The Tamil font injection in `pdfFontService.ts` was passing the literal string `'NotoSansTamil'` instead of the actual `tamilBase64` data to `addFileToVFS()`, causing a silent font corruption.
+    3. AI-returned date values as numbers (e.g. `2024`) would crash `.trim()` during PDF date formatting.
+- **Implementation**: Robust error extraction, fixed font VFS injection, added type-safety cast for date parsing.
+
+### 48. Analytics User Activity Summary Under-Counting
+- **Objective**: Fix Pedro Rojas showing only 1 document instead of 10+ in the Admin Dashboard "User Activity Summary (Last 30 Days)".
+- **Root Cause**: `getGlobalActivity(200)` fetched only the most recent 200 activity events globally. With 4 staff members logging in/out/exporting/translating, the 200-row window was too shallow to cover the full 30-day period, silently dropping older activity records.
+- **Implementation**: Increased limit to `getGlobalActivity(5000)` in `AnalyticsView.tsx`.
+
+### 49. Tamil/Telugu Accuracy Crisis — Root Cause & Correction
+- **Objective**: Investigate India team complaints of <30% accuracy and non-deterministic outputs for Tamil and Telugu translations.
+- **Root Cause (Two independent bugs)**:
+    1. **Destructive Image Compression**: `imageUtils.ts` had `maxHeight = 1080` for portrait letter scans. Since Brahmic scripts (Telugu తెలుగు, Tamil தமிழ்) have extremely fine stroke distinctions, crushing a 4000px scan to 1080px destroyed character legibility. The AI was forced to guess, producing different hallucinated outputs on each retry.
+    2. **Model Downgrade (Self-Correction)**: On March 11, the complex language model was mistakenly changed from `gemini-3.1-pro-preview` (latest, most intelligent) to `gemini-2.0-pro-exp-02-05` (a year-old experimental model). This was an error — the 3.1 Pro model was valid and active. The timeout issue was caused by Vercel's `maxDuration`, not the model ID.
+- **Implementation**:
+    - **Image Compression**: Expanded bounds from `1920x1080` to `2500x3500` at `0.85` quality to preserve handwriting fidelity.
+    - **Model Restoration**: Restored `gemini-3.1-pro-preview` as the primary engine for complex scripts (Tamil, Telugu, Amharic, Tigrigna).
+    - **Documentation**: Corrected all references across README.md, PRD.md, and SESSION_NOTES.md.
+

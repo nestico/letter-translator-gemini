@@ -35,7 +35,7 @@
 *   **Frontend**: React (Vite) with a premium, responsive design system.
 *   **Backend/API**: Vercel Serverless Functions (Node.js/TypeScript).
 *   **Database & Auth**: Supabase (PostgreSQL with RLS, Supabase Auth).
-*   **AI Engine**: Hybrid Google Gemini 2.0 (Dynamic routing between **Pro Experimental** for complex scripts and **Flash** for cost-efficiency).
+*   **AI Engine**: Hybrid Google Gemini (Dynamic routing between **3.1 Pro Preview** for complex scripts and **2.0 Flash** for cost-efficiency).
 *   **OCR (Fallback/Primary)**: Azure Computer Vision (as needed for standard scripts).
 
 ## 5. Success Metrics
@@ -49,4 +49,4 @@
 *   **Bulk Processing**: Uploading entire batches of letters for automated queue processing.
 *   **Linguistic Feedback Loop**: In-app interface for admins to correct AI output and immediately convert it to a new "Golden Reference."
 *   **Model Lifecycle Management**: Automated checks and upgrades for Gemini model versions to prevent service disruption.
-*   **Smart Model Toggle (Implemented)**: Deployed dynamic routing system (`gemini-2.0-pro-exp-02-05` vs `gemini-2.0-flash`) to eliminate invocation timeouts, maintain high OCR accuracy for Tigrigna/Amharic, and minimize global costs.
+*   **Smart Model Toggle (Implemented)**: Dynamic routing (`gemini-3.1-pro-preview` for Tamil/Telugu/Amharic/Tigrigna, `gemini-2.0-flash` for Latin scripts) to maximize OCR accuracy while minimizing global costs.
