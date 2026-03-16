@@ -306,6 +306,9 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                // Line 3: Child Name | Date
                // Handle parsing the AI-extracted date to 'Month Day, Year' and catching literal "null"
                let parsedDate = editedResult.headerInfo.date;
+               if (parsedDate != null && typeof parsedDate !== 'string') {
+                  parsedDate = String(parsedDate);
+               }
                if (!parsedDate || parsedDate.trim().toLowerCase() === 'null') {
                   parsedDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
                } else {
@@ -370,9 +373,10 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
             y += 5;
             pdfDoc.text(`Translated by: ${translatorName || 'Children Believe AI'}`, margin, y);
 
-         } catch (e) {
+         } catch (e: any) {
             console.error("PDF Logic Failure:", e);
-            alert("Error generating PDF: " + (e as Error).message);
+            const errMsg = e instanceof Error ? e.message : (e?.message || (typeof e === 'string' ? e : JSON.stringify(e)));
+            alert("Error generating PDF: " + errMsg);
             setIsExporting(false);
             return;
          }

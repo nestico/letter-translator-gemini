@@ -39,7 +39,7 @@ export const registerFontsForLanguage = async (doc: jsPDF, language: string) => 
     if (lang.includes('tamil')) {
         try {
             const tamilBase64 = await loadFontAsBase64('/fonts/NotoSansTamil-Regular.ttf');
-            doc.addFileToVFS('NotoSansTamil-Regular.ttf', 'NotoSansTamil');
+            doc.addFileToVFS('NotoSansTamil-Regular.ttf', tamilBase64);
             doc.addFont('NotoSansTamil-Regular.ttf', 'NotoSansTamil', 'normal');
             doc.setFont('NotoSansTamil');
         } catch (e) {
