@@ -2,7 +2,7 @@
  * Utility for client-side image compression using Canvas API.
  * Resizes images to a reasonable maximum dimension and reduces JPEG quality.
  */
-export const compressImage = async (file: File, maxWidth = 1920, maxHeight = 1080, quality = 0.8): Promise<File> => {
+export const compressImage = async (file: File, maxWidth = 2500, maxHeight = 3500, quality = 0.85): Promise<File> => {
     // Only compress images
     if (!file.type.startsWith('image/')) {
         return file;
