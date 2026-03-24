@@ -3,8 +3,14 @@ import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
 
-const supabaseUrl = 'https://kywdelvillnpiazzwsyy.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt5d2RlbHZpbGxucGlhenp3c3l5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3Mjc5NDQsImV4cCI6MjA4MzMwMzk0NH0.fYSdCW27-nwvEjcCbkf_JTdrLdztMK_cwk-z0OLIPNo';
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+    console.error('❌ Missing environment variables. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY before running.');
+    process.exit(1);
+}
+
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const referenceDir = 'c:/ANTIGRABITY/letter-translator-gemini/reference_data';
