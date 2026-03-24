@@ -39,7 +39,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onBack }) =>
         try {
             setLoading(true);
             const data = await getAllTranslations();
-            const activity = await getGlobalActivity(5000); // Huge limit to safely encompass all 30-day user activity
+            const activity = await getGlobalActivity(500); // Used only for alerts, NOT for upload counts
 
             if (!data) return;
 
@@ -75,22 +75,22 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onBack }) =>
             });
             const lettersByDay = Object.entries(dayMap).map(([date, count]) => ({ date, count }));
 
-            // User Uploads (Last 30 Days)
+            // ========================================================
+            // USER UPLOADS (Last 30 Days) — PERMANENT FIX
+            // Source: `translations` table (the actual source of truth)
+            // NOT the `activity` log, which has row limits and misses data.
+            // ========================================================
             const thirtyDaysAgo = new Date();
             thirtyDaysAgo.setDate(today.getDate() - 30);
 
-            const userUploadMap: Record<string, { count: number, email?: string }> = {};
+            const userUploadMap: Record<string, { count: number }> = {};
 
-            // Check activity logs for recent translations to get emails
-            activity.forEach(act => {
-                const createdAt = new Date(act.created_at);
-                if (act.action === 'TRANSLATE_LETTER' && createdAt >= thirtyDaysAgo) {
-                    const uId = act.user_id;
-                    const email = act.details?.email;
+            data.forEach(r => {
+                const createdAt = new Date(r.created_at);
+                if (createdAt >= thirtyDaysAgo) {
+                    const uId = r.user_id;
                     if (!userUploadMap[uId]) {
-                        userUploadMap[uId] = { count: 0, email: email };
-                    } else if (email && !userUploadMap[uId].email) {
-                        userUploadMap[uId].email = email;
+                        userUploadMap[uId] = { count: 0 };
                     }
                     userUploadMap[uId].count++;
                 }
@@ -124,7 +124,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ user, onBack }) =>
             const userActivities = Object.entries(userUploadMap).map(([id, data]) => {
                 const profile = profileMap[id];
                 return {
-                    email: profile?.name || profile?.email || data.email || `Staff: ${id.split('-')[0]}...`,
+                    email: profile?.name || profile?.email || `Staff: ${id.split('-')[0]}...`,
                     region: profile?.region || 'Global',
                     uploadCount: data.count
                 };
