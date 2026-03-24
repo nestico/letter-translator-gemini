@@ -309,12 +309,28 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                if (parsedDate != null && typeof parsedDate !== 'string') {
                   parsedDate = String(parsedDate);
                }
-               if (!parsedDate || parsedDate.trim().toLowerCase() === 'null') {
+               if (!parsedDate || parsedDate.trim().toLowerCase() === 'null' || parsedDate.trim() === '') {
+                  // No date extracted — fall back to today's date
                   parsedDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
                } else {
-                  const d = new Date(parsedDate);
-                  if (!isNaN(d.getTime())) {
-                     parsedDate = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                  parsedDate = parsedDate.trim();
+                  // Check if it's YYYY-MM-DD format (legacy AI responses)
+                  const isoMatch = parsedDate.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+                  if (isoMatch) {
+                     // Parse as UTC components to avoid timezone shift (new Date('2026-01-01') gives Dec 31 in EST!)
+                     const d = new Date(Date.UTC(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3])));
+                     if (!isNaN(d.getTime())) {
+                        parsedDate = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+                     }
+                  } else if (/^[A-Z][a-z]+ \d{1,2}, \d{4}$/.test(parsedDate)) {
+                     // Already in "Month Day, Year" format — use as-is
+                  } else {
+                     // Try generic parsing as last resort
+                     const d = new Date(parsedDate);
+                     if (!isNaN(d.getTime())) {
+                        parsedDate = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                     }
+                     // If still invalid, leave the raw string as-is
                   }
                }
 

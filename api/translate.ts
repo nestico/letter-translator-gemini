@@ -201,7 +201,7 @@ export default async function handler(req: any, res: any) {
 
   **JSON STRUCTURE**:
   {
-    "headerInfo": { "childId": "...", "childName": "...", "date": "..." }, // IMPORTANT: "date" MUST be converted to English and formatted as YYYY-MM-DD (do NOT leave it in the source language).
+    "headerInfo": { "childId": "...", "childName": "...", "date": "..." }, // IMPORTANT: "date" MUST be in English as "Month Day, Year" format (e.g. "March 15, 2026"). If ONLY a year is found, return "January 1, YYYY". If NO date is found anywhere on the letter, return "null".
     "transcription": "...",
     "translation": "English Only Text...",
     "detectedLanguage": "...",
