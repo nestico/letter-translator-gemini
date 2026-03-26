@@ -1,5 +1,6 @@
 import { queueRequest } from "./queueService";
 import { TranslationResult } from "../types";
+import { supabase } from "./supabase";
 
 export const translateImage = async (
   images: { base64: string; mimeType: string }[],
@@ -20,11 +21,16 @@ export const translateImage = async (
     const startTime = performance.now();
     console.log(`[Gemini API] Requesting translation via serverless endpoint. Images: ${images.length}`);
 
+    // Get the current user's session token for authenticated API calls
+    const { data: { session } } = await supabase.auth.getSession();
+    const accessToken = session?.access_token || '';
+
     try {
       const response = await fetch('/api/translate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
         },
         body: JSON.stringify({
           images,

@@ -1,2 +1,0 @@
-[31merror when starting dev server:
-Error: EPERM: operation not permitted, rmdir 'C:\ANTIGRABITY\letter-translator\node_modules\.vite\deps'[39m

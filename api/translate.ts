@@ -74,6 +74,32 @@ export default async function handler(req: any, res: any) {
             return res.status(405).json({ error: 'Method not allowed' });
         }
 
+        // ============================================================
+        // SECURITY: Verify the caller has a valid Supabase session (H-1)
+        // ============================================================
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ error: 'Unauthorized. No valid session token provided.' });
+        }
+
+        const token = authHeader.split('Bearer ')[1];
+        try {
+            const { createClient } = await import('@supabase/supabase-js');
+            const sbUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+            const sbKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+            if (sbUrl && sbKey) {
+                const sb = createClient(sbUrl, sbKey);
+                const { data: { user }, error: authError } = await sb.auth.getUser(token);
+                if (authError || !user) {
+                    return res.status(401).json({ error: 'Unauthorized. Invalid or expired session.' });
+                }
+                console.log(`[Auth] Verified user: ${user.email}`);
+            }
+        } catch (authErr) {
+            console.error('[Auth] Verification failed:', authErr);
+            return res.status(401).json({ error: 'Unauthorized. Session verification failed.' });
+        }
+
         const { images, sourceLanguage, targetLanguage } = req.body;
         const apiKey = process.env.GEMINI_API_KEY;
 

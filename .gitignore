@@ -26,3 +26,15 @@ dist-ssr
 
 # Private Reference Data
 reference_data/
+
+# Debug/Scratch Files (H-4 Security Cleanup)
+/*.sql
+import_*.txt
+output.txt
+history.txt
+full_history.txt
+extended_history.txt
+model_history.txt
+start_log*.txt
+initial_translate.ts
+metadata.json
