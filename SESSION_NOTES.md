@@ -498,3 +498,175 @@
     - **Model Restoration**: Restored `gemini-3.1-pro-preview` as the primary engine for complex scripts (Tamil, Telugu, Amharic, Tigrigna).
     - **Documentation**: Corrected all references across README.md, PRD.md, and SESSION_NOTES.md.
 
+# Session Notes - April 10, 2026
+
+### 50. Project Status & Remediation Handoff
+
+#### Section 1: What the App Is, Tech Stack, and Key File Map
+**What the app is:** An AI-powered document transcription and translation portal built for the NGO "Children Believe." It allows regional operations teams to upload handwritten letters from sponsored children (in various languages and scripts) and uses Google Gemini to generate highly literal, context-aware English translations formatted for PDF export to sponsors.
+
+**Tech Stack:**
+*   **Frontend:** React, TypeScript, Vite, Tailwind CSS
+*   **Backend / API:** Vercel Serverless Functions (`api/`)
+*   **Database & Auth:** Supabase (PostgreSQL with Row-Level Security)
+*   **AI Engine:** Google Gemini Paid Tier (Dynamic model routing)
+*   **Export:** jsPDF + native browser File System Access API
+
+**Key File Map:**
+*   `components/TranslationView.tsx`: Core UI where image uploading, dual-pane translation comparison, and zero-conflict PDF generation occurs.
+*   `api/translate.ts`: Vercel serverless proxy endpoint containing the critical model routing, AI prompt rules, and golden reference retrieval.
+*   `services/geminiService.ts`: Client-side wrapper managing queueing and dispatch payload sizes.
+*   `services/imageUtils.ts`: Handles crucial client-side canvas compression logic to save bandwidth.
+*   `REMEDIATION_PLAN.md`: The active source of truth tracking pending security and code-quality tasks.
+
+#### Section 2: 9 Issues Resolved across 3 Phases
+We successfully triaged, investigated, and deployed fixes for 9 major issues spanning core function, user-reported anomalies, and security flaws:
+
+**Phase 1: Core Bugs**
+1.  **Vercel Timeout Exhaustion** (`f4bf816`): Deployed `vercel.json` config adjusting `maxDuration` to 300s to allow Gemini complex-script analysis to complete safely without triggering 504 Gateway Timeouts.
+2.  **PDF Header Overlap** (`01e64f6`, `f5db0ca`): Re-engineered the jsPDF coordinate logic to prevent Child ID and dates from rendering over text. 
+3.  **JS Date Trap (-1 Day Shift)** (`bdfb8a3`, `a6bf934`): Handled JavaScript's notorious `YYYY-MM-DD` timezone offset shift that magically turned user input dates back to "January 1" on PDF outputs, converting to absolute `Month Day, Year`.
+
+**Phase 2: User-Reported Anomalies**
+4.  **Complex Script Destruction via Compression** (`e0c3540`, `e3a1254`): Users flagged Tamil & Amharic translations as gibberish. Root cause was standard image compression blurring complex ligatures. Expanded compression bounds dynamically to retain script fidelity while evading the Vercel 4.5MB limits.
+5.  **Analytics Dashboard Under-counting** (`947194e`, `4cba373`): Restructured the analytics pipeline to query directly from the `translations` table rather than relying on a truncated activity feed, curing accurate 30-day reporting.
+6.  **Missing Asian Fonts in PDFs** (`4a4c729`): Handled `jsPDF` fallback injection specifically for NotoSans fonts to ensure Tamil and Telugu outputs didn't render as undefined block squares.
+
+**Phase 3: Security Audit Remediations**
+7.  **(C-1 / C-2) Credential & Environment Variable Leaks** (`141e569`): Stripped the unprotected `api/test.ts` endpoint leaking server env variable names, and purged hardcoded Supabase keys historically sitting in `import_truth.js`.
+8.  **(H-1) Unauthenticated Translating** (`52ced90`): Forced `Bearer` JWT verification onto the Vercel `api/translate.ts` serverless route to stop unauthenticated direct API hitting.
+9.  **(H-2 -> H-4) Secret Re-Architecture & Housekeeping** (`52ced90`): Refactored Azure Vision/OpenAI usage completely securely behind server endpoints, removing browser `VITE_` keys. Cleaned the root repo of 15+ stray `history.txt` and `.sql` log files.
+
+#### Section 3: The 10 Outstanding Remediation Items
+These correspond to the existing `REMEDIATION_PLAN.md` matrix and are waiting in the backlog:
+
+**Medium Priority:**
+*   **M-1:** Apply `user.isAdmin` permission gate on the Analytics dashboard block.
+*   **M-2:** Sever the Supabase client initialization from using string placeholder fallbacks so it fails loudly on configuration drift.
+*   **M-3:** Fortify `generateWithRetry` in `translate.ts` to throw properly if the final attempt loop exhausts.
+*   **M-4:** Implement safer `try/catch` wrapping around the Gemini JSON truncation-recovery logic.
+*   **M-5:** Codify the missing `headerInfo` block directly within the `TranslationResult` TypeScript schema.
+
+**Informational / Improvements:**
+*   **I-1:** Inject strict Rate Limiting into `api/translate.ts`.
+*   **I-2:** Setup Content Security Policy (CSP) headers guarding against XSS injections.
+*   **I-3:** Transition Tailwind CSS off runtime CDN compilation towards a locally built Vite integration. 
+*   **I-4:** Deprecate/purge the unused `translateImage` leftovers inside `azureService.ts`.
+*   **I-5:** Implement an automated model health check ping to ensure Google's preview models persist during app-init.
+
+#### Section 4: Environment & Configuration Notes
+*   **Hosting Context:** This must run on a **Vercel Pro** subscription. Hobby tiers enforce a hard 60s execution limit, which is categorically insufficient for heavy zero-shot OCR passes on languages like Tigrigna/Amharic.
+*   **Database:** Supabase acts as our source of truth. All tables must have Row Level Security (RLS) policies engaged. JWTs generated by the client dictate what data a user is allowed to mutate or read. 
+*   **Keys Architecture:** We heavily restrict anything beginning with `VITE_`. Only harmless UI/public configurations hit the client. Heavy model keys (Gemini Paid Tier, Azure) exclusively reside as `process.env` backend variables inside the Vercel edge functions (`api/*`).
+
+#### Section 5: User Context
+*   **Organization:** Children Believe (NGO). 
+*   **The Operators:** Global field staff and regional scribes intercepting physical letters.
+*   **Primary Regional Corridors:**
+    *   *India:* Interfacing deeply with Telugu and Tamil scripts.
+    *   *Africa:* Ethiopia predominately dealing with Amharic, Tigrigna, and Afan Oromo. 
+    *   *The Americas:* Latin/Spanish scripts. 
+*   **Goal:** Protect the 100% literal translation of local dialects — refusing to let the AI "hallucinate" boilerplate (e.g., inventing Christmas celebrations when a child simply wrote a generic blessing).
+
+#### Section 6: The 5 Critical Gotchas (Lessons Learned)
+For anyone touching this codebase moving forward, observe the following landmines:
+1.  **Google Model Deprecation:** Google routinely shuts down experimental `-preview` variants. The API layer always needs a `try/catch` fallback switch that routes to the GA stable variant (`gemini-2.0-flash`) or the platform will abruptly return 404s.
+2.  **The JavaScript Date Shift:** Calling `new Date("YYYY-MM-DD")` in North American timezones instantly mutates to the day before under the hood because JS parses YYYY-MM-DD as strict UTC, then snaps it backward into negative local offsets.
+3.  **Analytics Sourcing:** Never tally metrics off of "Activity Event" tables (they inevitably get truncated). Deep aggregations must read pure materialized records coming from the main `translations` baseline table. 
+4.  **The Image Compression Dilemma:** Vercel functions have a strict 4.5MB payload cap. However, if client-side Canvas compression is dialed down too sharply, foreign scripts (like Tamil loops) lose pixel data and the OCR will hallucinate gibberish. Balance is paramount.
+5.  **Dynamic Golden References:** The core intelligence relies on pulling "Golden" Ground-Truth references from Supabase dynamically and injecting them into the Gemini prompt. Without this literal few-shot guidance, LLMs natively struggle to translate culturally specific contexts.
+
+# Session Notes - April 10, 2026
+
+### 50. Project Status & Remediation Handoff
+
+#### Section 1: What the App Is, Tech Stack, and Key File Map
+**What the app is:** An AI-powered document transcription and translation portal built for the NGO "Children Believe." It allows regional operations teams to upload handwritten letters from sponsored children (in various languages and scripts) and uses Google Gemini to generate highly literal, context-aware English translations formatted for PDF export to sponsors.
+
+**Tech Stack:**
+- **Frontend:** React, TypeScript, Vite, Tailwind CSS
+- **Backend / API:** Vercel Serverless Functions (pi/)
+- **Database & Auth:** Supabase (PostgreSQL with Row-Level Security)
+- **AI Engine:** Google Gemini **Paid Tier** (Dynamic model routing — no data training on Paid Tier)
+- **Export:** jsPDF + native browser File System Access API
+
+**Key File Map:**
+- components/TranslationView.tsx: Core UI — image uploading, dual-pane translation comparison, PDF generation.
+- pi/translate.ts: Vercel serverless proxy — model routing, AI prompt rules, golden reference retrieval, JWT auth.
+- services/geminiService.ts: Client-side wrapper — queueing, compression, HTTP dispatch.
+- services/imageUtils.ts: Client-side canvas compression (critical for complex scripts vs. Vercel 4.5MB limit).
+- REMEDIATION_PLAN.md: Active source of truth tracking pending security and code-quality tasks.
+
+---
+
+#### Section 2: 9 Issues Resolved across 3 Phases
+
+**Phase 1: Core Bugs**
+1. **Vercel Timeout Exhaustion** (4bf816): Updated ercel.json to maxDuration: 300 (Vercel Pro). Eliminated 504 timeouts on multi-page Gemini passes.
+2. **PDF Header Overlap** ( 1e64f6, 5db0ca): Re-engineered jsPDF coordinate logic. Three-row header prevents text collisions.
+3. **JS Date Trap (-1 Day Shift)** (dfb8a3, 6bf934): Fixed YYYY-MM-DD UTC timezone issue shifting dates back one day. Switched to Month Day, Year absolute format.
+
+**Phase 2: User-Reported Anomalies**
+4. **Complex Script Destruction via Compression** (e0c3540, e3a1254): Tamil/Amharic translations were gibberish. Expanded canvas bounds from 1920x1080 → 2500x3500 at  .85 quality to preserve Brahmic script ligatures.
+5. **Analytics Dashboard Under-counting** (947194e, 4cba373): Switched analytics source from truncated activity log to the full 	ranslations table. Fixed Pedro Rojas showing 1 instead of 10+ docs.
+6. **Missing Asian Fonts in PDFs** (4a4c729): Fixed Tamil font VFS injection in pdfFontService.ts — was passing the string 'NotoSansTamil' instead of the actual base64 data.
+
+**Phase 3: Security Audit Remediations**
+7. **(C-1 / C-2) Credential Leaks** (141e569): Stripped pi/test.ts from exposing env variable names publicly. Removed hardcoded Supabase keys from scripts/import_truth.js.
+8. **(H-1) Unauthenticated Translation Endpoint** (52ced90): Added Bearer JWT verification to pi/translate.ts — unauthenticated callers now receive 401.
+9. **(H-2 → H-4) Key Re-Architecture & Cleanup** (52ced90): Moved Azure Vision/OpenAI behind serverless endpoints, removed all VITE_ prefixed secrets from browser bundle. Purged 15+ debug files from git tracking.
+
+---
+
+#### Section 3: The 10 Outstanding Remediation Items (from REMEDIATION_PLAN.md)
+
+**Medium Priority:**
+- **M-1:** Apply user.isAdmin gate on the Analytics dashboard (App.tsx).
+- **M-2:** Remove Supabase client placeholder fallbacks — fail loudly on misconfiguration.
+- **M-3:** Add terminal 	hrow after generateWithRetry for-loop to prevent undefined return.
+- **M-4:** Wrap JSON truncation-recovery in 	ry/catch — current } appending is fragile.
+- **M-5:** Add headerInfo to TranslationResult interface in 	ypes.ts.
+
+**Informational / Improvements:**
+- **I-1:** Rate-limit pi/translate.ts per user/IP to prevent Gemini credit abuse.
+- **I-2:** Add Content Security Policy (CSP) headers in ercel.json.
+- **I-3:** Replace runtime Tailwind CDN with a locally built Vite integration.
+- **I-4:** Remove unused 	ranslateImage export from zureService.ts.
+- **I-5:** Add model health-check on app startup to catch preview model deprecations early.
+
+---
+
+#### Section 4: Environment & Configuration Notes
+- **Vercel:** Must be on **Vercel Pro** — Hobby plan's 60s limit is insufficient for multi-page Amharic/Tigrigna analysis. maxDuration: 300 is set in ercel.json.
+- **Supabase:** ca-central-1 region for Canadian data residency. All tables have RLS enabled. Invite-only auth (no public sign-ups).
+- **API Keys:** All secrets are server-only (process.env). Nothing sensitive uses VITE_ prefix. Gemini key is on the **Paid Tier** ("No-Training" guarantee — beneficiary data is not used to train Google models).
+- **GCP Budget:** Hard cap documented in docs/GCP_BUDGET_SETUP.md — /month with Pub/Sub API disconnect trigger.
+- **Golden Reference Admin UUID:** 82551711-7881-4f84-847d-86b4f716ed2c
+
+---
+
+#### Section 5: User Context
+- **Organization:** Children Believe (NGO)
+- **Operators:** Global field staff and regional scribes processing physical child-to-sponsor letters.
+- **Key Reporters:** Pedro Rojas (India/PDF issues), India team (Tamil/Telugu accuracy).
+- **Regional Corridors:**
+  - *India:* Telugu, Tamil — extreme sensitivity to image compression and model tier.
+  - *Africa (Ethiopia):* Amharic, Tigrigna, Afan Oromo — needs literal fidelity; war/medical sensitivity.
+  - *The Americas:* Spanish — lower complexity, uses gemini-2.0-flash standard route.
+- **Goal:** 100% literal translation — the AI must never invent boilerplate not in the source image.
+
+---
+
+#### Section 6: The 5 Critical Gotchas
+
+1. **Google Model Deprecation:** Preview models (-preview) get shut down with little notice (e.g., gemini-3-flash-preview died March 9, 2026). Always keep a 	ry/catch fallback to gemini-2.0-flash in pi/translate.ts.
+
+2. **The JavaScript Date Shift:** 
+ew Date("YYYY-MM-DD") parses as UTC midnight, which in EST/EDT becomes the *previous* day. Never use ISO date strings with 
+ew Date() for display. Use Month Day, Year format from the AI directly.
+
+3. **Analytics Sourcing:** Never count from the ctivity event table — it has a low fetch limit and drops old records. Always aggregate from the primary 	ranslations table for accurate 30-day stats.
+
+4. **The Image Compression Dilemma:** Vercel's 4.5MB payload cap forces client-side compression. But compressing too aggressively destroys Tamil/Telugu fine strokes and causes hallucinations. Current sweet spot: 2500x3500 px at  .85 JPEG quality for complex scripts.
+
+5. **Dynamic Golden References:** The AI's high fidelity for minority languages depends on fetching 2 "Golden" (human-verified) examples from Supabase and injecting them into every prompt. Without these few-shot anchors, Gemini defaults to generic, inaccurate outputs.
