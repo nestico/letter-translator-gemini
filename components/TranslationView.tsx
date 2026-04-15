@@ -309,6 +309,15 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                if (parsedDate != null && typeof parsedDate !== 'string') {
                   parsedDate = String(parsedDate);
                }
+
+               // Intercept AI hallucinating a bare year or "January 1" when date is missing
+               if (parsedDate) {
+                  const pt = parsedDate.trim();
+                  if (/^\d{4}$/.test(pt) || /^January 1, \d{4}$/i.test(pt) || /^\d{4}-01-01$/.test(pt)) {
+                     parsedDate = 'null';
+                  }
+               }
+
                if (!parsedDate || parsedDate.trim().toLowerCase() === 'null' || parsedDate.trim() === '') {
                   // No date extracted — fall back to today's date
                   parsedDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
