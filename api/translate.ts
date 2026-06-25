@@ -113,18 +113,19 @@ export default async function handler(req: any, res: any) {
 
         const lowerLang = (sourceLanguage || '').toLowerCase();
 
-        // Model routing: Use the best available models as of March 2026
-        // - gemini-3.1-pro-preview: Latest & most intelligent, best OCR for dense non-Latin scripts
-        // - gemini-2.0-flash: Stable GA model, fast & cost-effective for Latin scripts
-        // - gemini-3-flash-preview was DEPRECATED on March 9, 2026 — do NOT use
+        // Model routing: Updated June 2026
+        // - gemini-3.1-pro-preview: Best for dense non-Latin scripts (Tamil, Telugu, Amharic, Tigrigna)
+        // - gemini-3.5-flash: Current stable GA model replacing gemini-2.0-flash (deprecated June 1, 2026)
+        // - gemini-3.1-flash-lite: Cost-efficient fallback for standard Latin-script languages
+        // DO NOT USE: gemini-2.0-flash, gemini-2.0-flash-lite (shut down June 1, 2026)
         const MODEL_CONFIG = {
             complex: {
-                primary: "gemini-3.1-pro-preview",   // Cutting-edge for Tamil, Telugu, Amharic, Tigrigna
-                fallback: "gemini-2.0-flash"          // Stable GA fallback
+                primary: "gemini-3.1-pro-preview",   // Best OCR for Tamil, Telugu, Amharic, Tigrigna
+                fallback: "gemini-3.5-flash"          // Current stable GA fallback
             },
             standard: {
-                primary: "gemini-2.0-flash",          // Fast & reliable for Spanish, French, etc.
-                fallback: "gemini-2.0-flash"          // Same stable GA model as safety net
+                primary: "gemini-3.5-flash",          // Fast & reliable for Spanish, French, etc.
+                fallback: "gemini-3.1-flash-lite"     // Cost-efficient safety net
             }
         };
 
