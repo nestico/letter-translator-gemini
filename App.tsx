@@ -19,7 +19,6 @@ import { supabase } from './services/supabase';
 import { logActivity } from './services/activityService';
 
 
-console.log("App Module Loading...");
 const fetchUserProfile = async (userId: string): Promise<{ isAdmin: boolean, region: string }> => {
   try {
     const { data, error } = await supabase

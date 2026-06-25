@@ -670,3 +670,46 @@ ew Date() for display. Use Month Day, Year format from the AI directly.
 4. **The Image Compression Dilemma:** Vercel's 4.5MB payload cap forces client-side compression. But compressing too aggressively destroys Tamil/Telugu fine strokes and causes hallucinations. Current sweet spot: 2500x3500 px at  .85 JPEG quality for complex scripts.
 
 5. **Dynamic Golden References:** The AI's high fidelity for minority languages depends on fetching 2 "Golden" (human-verified) examples from Supabase and injecting them into every prompt. Without these few-shot anchors, Gemini defaults to generic, inaccurate outputs.
+
+# Session Notes - June 25, 2026
+
+### 51. Security & Code Quality Remediation (Claude Code / Antigravity)
+
+#### P0-1: Azure Credentials Cleared from `.env`
+- **Context:** `.env` contained live Azure OpenAI and Azure Vision API keys. Azure services are not currently active in production (Gemini is the sole AI engine). Keys were visible in the local file.
+- **Resolution:** Replaced both live keys with descriptive placeholders (`your-azure-openai-api-key-here`, `your-azure-vision-subscription-key-here`). Endpoints and deployment names retained for future re-activation. Azure code (`azureService.ts`, `api/chat.ts`, `ocrService.ts`) intentionally preserved.
+- **Action required:** Rotate both Azure keys in the Azure portal — they were briefly visible in a session log.
+- **Note:** `.env` was confirmed never committed to git history (zero output from `git log -- .env`). No BFG/filter-repo needed.
+
+#### M-2: Supabase Client Now Fails Loudly on Missing Config
+- **File:** `services/supabase.ts`
+- **Before:** Silently fell back to `https://placeholder.supabase.co` if env vars were absent, masking misconfiguration.
+- **After:** Throws `Error: Missing Supabase configuration: VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be set.` immediately on startup if either var is missing.
+
+#### M-3: `generateWithRetry` Terminal Throw Added
+- **File:** `api/translate.ts`
+- **Before:** If all 3 retries were exhausted without an exception (edge case), the function returned `undefined`, causing an untyped `TypeError` downstream.
+- **After:** Added `throw new Error('Gemini API: all retries exhausted without a successful response.')` after the for-loop. TypeScript can now correctly infer the return type is never `undefined`.
+
+#### M-5: `HeaderInfo` Type Added to `TranslationResult`
+- **File:** `types.ts`
+- **Before:** `headerInfo` was used throughout PDF export and save logic but absent from the `TranslationResult` interface, forcing TypeScript to silently accept `any`.
+- **After:** Added `HeaderInfo` interface (`childId?`, `childName?`, `date?`) and `headerInfo?: HeaderInfo` to `TranslationResult`. Full type safety now enforced across the PDF generation and Supabase save flows.
+
+#### Package Cleanup: Removed Two Unused Dependencies
+- **Removed `@google/genai` (v1.34.0):** The new unified Google AI SDK was installed alongside the older `@google/generative-ai` but never imported anywhere. Removing it eliminates ~300KB from the bundle and removes SDK naming confusion.
+- **Removed `@azure/openai` (v2.0.0):** Not imported in any source file. `api/chat.ts` uses `AzureOpenAI` from the `openai` package (kept). `@azure/openai` was pure dead weight.
+
+#### Minor Code Quality Fixes
+- **`App.tsx`:** Removed stray `console.log("App Module Loading...")` that fired on every page load in production.
+- **`api/translate.ts`:** Removed unused `targetLanguage` from `req.body` destructuring (TS hint 6133). Added explicit `: any` annotations to `result` and `response` variables (TS hints 7043).
+
+#### Current Open Items (as of this session)
+| # | Issue | Priority |
+|---|-------|----------|
+| M-1 | Admin gate on Analytics dashboard (`App.tsx:230`) | Medium |
+| M-4 | JSON truncation recovery hardening (`api/translate.ts`) | Medium |
+| I-1 | Rate limiting on `/api/translate` | Improvement |
+| I-2 | CSP headers in `vercel.json` | Improvement |
+| I-3 | Bundle Tailwind locally (remove CDN from `index.html`) | Improvement |
+| I-5 | Model health check on app startup | Improvement |

@@ -65,6 +65,7 @@ const generateWithRetry = async (model: any, contentParts: any[], retries = 3, i
             throw error;
         }
     }
+    throw new Error('Gemini API: all retries exhausted without a successful response.');
 };
 
 export default async function handler(req: any, res: any) {
@@ -100,7 +101,7 @@ export default async function handler(req: any, res: any) {
             return res.status(401).json({ error: 'Unauthorized. Session verification failed.' });
         }
 
-        const { images, sourceLanguage, targetLanguage } = req.body;
+        const { images, sourceLanguage } = req.body;
         const apiKey = process.env.GEMINI_API_KEY;
 
         if (!apiKey) {
@@ -246,8 +247,8 @@ export default async function handler(req: any, res: any) {
             });
         });
 
-        let result;
-        let response;
+        let result: any;
+        let response: any;
         try {
             result = await generateWithRetry(model, contentParts);
             response = await result.response;

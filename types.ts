@@ -6,7 +6,14 @@ export interface User {
   region?: string;
 }
 
+export interface HeaderInfo {
+  childId?: string;
+  childName?: string;
+  date?: string;
+}
+
 export interface TranslationResult {
+  headerInfo?: HeaderInfo;
   transcription: string;
   translation: string;
   detectedLanguage?: string;
