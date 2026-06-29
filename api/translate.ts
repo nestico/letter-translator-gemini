@@ -186,7 +186,9 @@ export default async function handler(req: any, res: any) {
             const sbKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
 
             if (sbUrl && sbKey) {
-                const sb = createClient(sbUrl, sbKey);
+                const sb = createClient(sbUrl, sbKey, {
+                    global: { headers: { Authorization: `Bearer ${token}` } }
+                });
                 const { data: goldenRefs, error: dbErr } = await sb
                     .from('translations')
                     .select('transcription, translation')
