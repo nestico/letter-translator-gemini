@@ -226,7 +226,7 @@ function App() {
           />
         )}
 
-        {appState === AppState.ANALYTICS && user && (
+        {appState === AppState.ANALYTICS && user?.isAdmin && (
           <AnalyticsView
             user={user}
             onBack={() => setAppState(AppState.LANDING)}

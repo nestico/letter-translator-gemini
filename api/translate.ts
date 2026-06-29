@@ -145,6 +145,7 @@ export default async function handler(req: any, res: any) {
             model: activeModelName,
             generationConfig: {
                 responseMimeType: "application/json",
+                maxOutputTokens: 8192,
                 temperature: 0.1,
                 topP: 0.8,
                 topK: 40,
@@ -268,20 +269,27 @@ export default async function handler(req: any, res: any) {
             }
         }
 
-        let text = response.text();
-
-        // Safety Force-Close JSON if truncated
-        text = text.trim();
-        if (!text.endsWith("}")) {
-            if (text.lastIndexOf('"') > text.lastIndexOf('}')) {
-                text += '"}';
-            } else {
-                text += '}';
-            }
-        }
+        const rawText = response.text();
 
         try {
+            let text = rawText.trim();
+
+            // Strip markdown code fences if the model wrapped the JSON in ```json ... ```
+            const fenceMatch = text.match(/^```(?:json)?\s*([\s\S]*?)```\s*$/);
+            if (fenceMatch) text = fenceMatch[1].trim();
+
+            // Attempt to close truncated JSON — only as a last resort before parse
+            if (!text.endsWith("}")) {
+                text += text.lastIndexOf('"') > text.lastIndexOf('}') ? '"}' : '}';
+            }
+
             const parsed = JSON.parse(text);
+
+            // Validate required fields are present before accepting the response
+            if (!parsed.transcription || !parsed.translation) {
+                console.error("[Gemini] Response missing required fields:", Object.keys(parsed));
+                return res.status(500).json({ error: "The AI response was incomplete. Please try again." });
+            }
 
             if (parsed.confidenceScore !== undefined && parsed.confidenceScore < 0.7) {
                 parsed._flagged = true;
@@ -291,8 +299,8 @@ export default async function handler(req: any, res: any) {
 
             return res.status(200).json(parsed);
         } catch (jsonErr) {
-            console.error("[Gemini] Invalid JSON returned from AI:", text);
-            return res.status(500).json({ error: "The AI returned an invalid format. Please try again.", raw: text.substring(0, 100) });
+            console.error("[Gemini] Invalid JSON returned from AI:", rawText.substring(0, 200));
+            return res.status(500).json({ error: "The AI returned an invalid format. Please try again.", raw: rawText.substring(0, 100) });
         }
 
     } catch (error: any) {
