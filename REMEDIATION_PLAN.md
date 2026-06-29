@@ -1,13 +1,13 @@
 # 🔍 Project Security Audit & Remediation Plan
 **Letter Translator — Full Code Review**
 **Audit Date:** March 24, 2026 | **Reviewed by:** Claude (Antigravity)
-**Last Updated:** June 25, 2026
+**Last Updated:** June 29, 2026
 
 ---
 
 ## Executive Summary
 
-Original audit identified **2 critical**, **4 high**, and **5 medium** priority issues. As of June 25, 2026: all Critical and High items are resolved. Medium items M-2, M-3, and M-5 are resolved. Remaining open: **M-1**, **M-4**, and all **I-x** improvements.
+Original audit identified **2 critical**, **4 high**, and **5 medium** priority issues. As of June 29, 2026: all Critical, High, and Medium items are fully resolved. P1 Supabase RLS audit complete. Remaining open: **I-x improvements** and **P2 items** from the project_review.md action plan.
 
 ---
 
@@ -142,10 +142,10 @@ Since Gemini models get deprecated with little notice (e.g. `gemini-3-flash-prev
 | H-3 | Move Azure Vision server-side | 🔴 High | ✅ Done (`52ced90`) | `services/ocrService.ts` |
 | H-4 | Remove scratch files from git | 🔴 High | ✅ Done (`52ced90`) | `.gitignore` |
 | P0-1 | Azure keys in `.env` (live credentials) | 🔴 High | ✅ Done (Jun 25) | `.env` |
-| M-1 | Admin gate on Analytics | 🟡 Medium | ⏳ Pending | `App.tsx` |
+| M-1 | Admin gate on Analytics | 🟡 Medium | ✅ Done (Jun 29) | `App.tsx` |
 | M-2 | Remove Supabase placeholder fallback | 🟡 Medium | ✅ Done (Jun 25) | `services/supabase.ts` |
 | M-3 | Fix `generateWithRetry` terminal throw | 🟡 Medium | ✅ Done (Jun 25) | `api/translate.ts` |
-| M-4 | Improve JSON truncation recovery | 🟡 Medium | ⏳ Pending | `api/translate.ts` |
+| M-4 | Improve JSON truncation recovery | 🟡 Medium | ✅ Done (Jun 29) | `api/translate.ts` |
 | M-5 | Add `headerInfo` to TypeScript types | 🟡 Medium | ✅ Done (Jun 25) | `types.ts` |
 | I-1 | Rate limiting on translate endpoint | 🔵 Info | ⏳ Pending | `api/translate.ts` |
 | I-2 | CSP headers | 🔵 Info | ⏳ Pending | `vercel.json` |
@@ -155,5 +155,26 @@ Since Gemini models get deprecated with little notice (e.g. `gemini-3-flash-prev
 
 ---
 
+---
+
+## ✅ P1 — Supabase RLS Audit (June 29, 2026)
+
+Full audit run via Supabase MCP against project `kywdelvillnpiazzwsyy`. Three vulnerabilities found and patched via migration `tighten_rls_anon_and_public_policies`:
+
+**Fixed:**
+1. **`translations` — anon SELECT on golden references** → changed to `authenticated` only. Unauthenticated users could previously read child transcription/translation data.
+2. **`translations` — anon INSERT for golden references** → policy removed entirely. Import is complete; future imports use service role.
+3. **`profiles` — public SELECT (`USING: true`)** → replaced with `auth.uid() = id`. Staff could previously read all colleagues' emails, roles, and regions.
+
+**Also fixed in `api/translate.ts`:** Golden reference fetch now passes the user's JWT (`Authorization: Bearer <token>`) to the Supabase client so it operates as `authenticated` role. Commit `1895c8d`.
+
+**Confirmed healthy (no changes needed):**
+- `translations`: per-user INSERT/UPDATE/DELETE correctly scoped to `auth.uid() = user_id`
+- `activity`: per-user SELECT/INSERT; admin SELECT via `is_admin()`
+- `is_admin()` function: queries `profiles.role = 'admin'` — no recursion risk
+- RLS enabled on all 3 tables
+
+---
+
 > [!NOTE]
-> **Open items as of June 25, 2026:** M-1 (admin analytics gate), M-4 (JSON recovery hardening), I-1 through I-5 (improvements).
+> **Open items as of June 29, 2026:** I-1 (rate limiting), I-2 (CSP headers), I-3 (Tailwind CDN → PostCSS), I-5 (model health check). P2 items from project_review.md: ChatBot decision, TranslationView decomposition, root directory cleanup.

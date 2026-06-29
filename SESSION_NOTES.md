@@ -713,3 +713,57 @@ ew Date() for display. Use Month Day, Year format from the AI directly.
 | I-2 | CSP headers in `vercel.json` | Improvement |
 | I-3 | Bundle Tailwind locally (remove CDN from `index.html`) | Improvement |
 | I-5 | Model health check on app startup | Improvement |
+
+# Session Notes — June 29, 2026
+
+### 52. M-1, M-4 Resolution + P1 Supabase RLS Audit
+
+#### M-1: Admin Gate on Analytics Dashboard
+- **File:** `App.tsx:229`
+- **Before:** `{appState === AppState.ANALYTICS && user && (` — any authenticated user could reach the Analytics dashboard and trigger `getAllTranslations()` which returns all users' records globally.
+- **After:** `{appState === AppState.ANALYTICS && user?.isAdmin && (` — only users with `isAdmin: true` (set from `profiles.role = 'admin'`) can access the dashboard.
+- **Commit:** `55147ce`
+
+#### M-4: JSON Truncation — Root Cause + Defensive Hardening
+- **Root cause fix (per project_review.md #11):** Added `maxOutputTokens: 8192` to `generationConfig` in `api/translate.ts`. Long multi-page Tamil/Amharic letters were hitting the model's default output token cap silently.
+- **Defensive hardening (kept on top of root cause fix):**
+  - All text manipulation moved inside `try` block — any parse failure now cleanly returns a 500 error.
+  - Added markdown fence stripping — handles models occasionally wrapping output in ` ```json ``` ` blocks.
+  - Added required-field validation after parse — rejects responses missing `transcription` or `translation` even if JSON is syntactically valid (catches the case where the truncation heuristic produces accidentally valid but empty JSON).
+  - Error log expanded from 100 → 200 chars for better diagnostics.
+- **Commit:** `55147ce`
+
+#### P1: Supabase RLS Full Audit
+- **Method:** Live audit via Supabase MCP against project `kywdelvillnpiazzwsyy`.
+- **All 3 tables confirmed with RLS enabled:** `translations`, `activity`, `profiles`.
+- **`is_admin()` function:** Verified correct — queries `profiles.role = 'admin'` for `auth.uid()`. No recursion risk.
+
+**Three vulnerabilities patched (migration: `tighten_rls_anon_and_public_policies`):**
+
+1. **`translations` — anon SELECT on golden references removed**
+   - Old: `{anon}` role could SELECT `is_golden = true` rows — unauthenticated HTTP requests could read child transcription/translation data.
+   - New: `{authenticated}` only — requires a valid session.
+
+2. **`translations` — anon INSERT for golden references removed**
+   - Old: Anyone knowing the admin UUID could INSERT golden reference records without a session.
+   - New: Policy dropped entirely — golden reference import is complete; future imports use service role or admin session.
+
+3. **`profiles` — public SELECT (`USING: true`) replaced**
+   - Old: Any authenticated user could `SELECT *` from `profiles`, exposing all staff emails, full names, roles, and regions.
+   - New: `auth.uid() = id` — users see only their own profile. Admin cross-user reads preserved via existing `is_admin()` policy.
+
+**Code fix in `api/translate.ts`:** Golden reference fetch now passes the user JWT (`Authorization: Bearer <token>`) when creating the server-side Supabase client. Previously used bare anon key (acted as `anon` role), which would have failed after the policy tightening.
+- **Commit:** `1895c8d`
+
+#### Current Open Items (as of June 29, 2026)
+| # | Issue | Priority |
+|---|-------|----------|
+| I-1 | Rate limiting on `/api/translate` | Improvement |
+| I-2 | CSP headers in `vercel.json` | Improvement |
+| I-3 | Bundle Tailwind locally (remove CDN) | Improvement |
+| I-5 | Model health check on app startup | Improvement |
+| P2 | ChatBot: complete with Gemini or hide | P2 |
+| P2 | Decompose `TranslationView.tsx` (1005 lines) | P2 |
+| P3 | Clean root directory / move planning docs | P3 |
+| P3 | Replace remaining `any` types | P3 |
+| P3 | Add SEO meta tags to `index.html` | P3 |
