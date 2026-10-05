@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { translateImage } from '../services/geminiService';
 import { User, TranslationResult } from '../types';
 import { logActivity } from '../services/activityService';
@@ -7,6 +7,7 @@ import { jsPDF } from 'jspdf';
 import { registerFontsForLanguage } from '../services/pdfFontService';
 
 import { compressImage } from '../services/imageUtils';
+import { detectSensitiveData, SENSITIVE_TYPE_LABELS } from '../services/sensitiveDataService';
 
 interface TranslationViewProps {
    user: User | null;
@@ -42,6 +43,25 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
          setTranslatorName(user.name);
       }
    }, [user]);
+
+   // Sensitive data check — runs on the edited text so the banner updates as staff remove details
+   const [sensitiveAcknowledged, setSensitiveAcknowledged] = useState(false);
+   const sensitiveFindings = useMemo(() => {
+      if (!editedResult) return [];
+      return detectSensitiveData(
+         editedResult.transcription || '',
+         editedResult.translation || '',
+         [editedResult.headerInfo?.childId || '', exportFileName]
+      );
+   }, [editedResult, exportFileName]);
+   const sensitiveSignature = sensitiveFindings.map(f => `${f.type}:${f.value}`).join('|');
+
+   // Any new or changed finding requires a fresh acknowledgment
+   useEffect(() => {
+      setSensitiveAcknowledged(false);
+   }, [sensitiveSignature]);
+
+   const isBlockedBySensitiveData = sensitiveFindings.length > 0 && !sensitiveAcknowledged;
 
    const LANGUAGES = [
       'Auto-Detect', '(NIC) spanish', '(BFA) French', '(CAN) English', '(IND) Telugu', '(IND) Tamil', '(ETH) Amharic', '(ETH) Afan Oromo', '(ETH) Tigrigna', '(HND) Spanish', '(PRY) Spanish', 'German', 'Italian', '(BRA) Portuguese', 'Latin', 'Dutch', 'Russian', 'Chinese', 'Japanese'
@@ -132,7 +152,7 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
    };
 
    const handleSaveToHistory = async () => {
-      if (!user || !editedResult || hasSaved || isSaving) return;
+      if (!user || !editedResult || hasSaved || isSaving || isBlockedBySensitiveData) return;
 
       setIsSaving(true);
       // Safety timeout: 15 seconds max for saving. 
@@ -175,6 +195,7 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
    };
 
    const handleExportClick = () => {
+      if (isBlockedBySensitiveData) return;
       setShowExportModal(true);
    };
 
@@ -515,8 +536,9 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                      {!hasSaved && user && (
                         <button
                            onClick={handleSaveToHistory}
-                           disabled={isSaving}
-                           className={`flex items-center justify-center h-10 px-4 rounded-lg transition-colors text-sm font-bold shadow-sm ${isSaving ? 'bg-slate-100 text-slate-400' :
+                           disabled={isSaving || isBlockedBySensitiveData}
+                           title={isBlockedBySensitiveData ? 'Review the sensitive data warning first' : undefined}
+                           className={`flex items-center justify-center h-10 px-4 rounded-lg transition-colors text-sm font-bold shadow-sm ${isSaving || isBlockedBySensitiveData ? 'bg-slate-100 text-slate-400 cursor-not-allowed' :
                               result._flagged ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-green-600 text-white hover:bg-green-700'
                               }`}
                         >
@@ -532,7 +554,9 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                      )}
                      <button
                         onClick={handleExportClick}
-                        className="flex items-center justify-center h-10 px-4 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-bold"
+                        disabled={isBlockedBySensitiveData}
+                        title={isBlockedBySensitiveData ? 'Review the sensitive data warning first' : undefined}
+                        className="flex items-center justify-center h-10 px-4 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary/10"
                      >
                         <span className="material-symbols-outlined mr-2 text-[20px]">download</span>
                         Export PDF
@@ -721,6 +745,36 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                                  <p className="text-amber-700 dark:text-amber-500 text-sm m-0 mt-1">
                                     {result._flagReason || "The AI had difficulty reading parts of this handwriting. Please review the results closely."}
                                  </p>
+                              </div>
+                           </div>
+                        )}
+
+                        {/* Sensitive Data Banner */}
+                        {sensitiveFindings.length > 0 && (
+                           <div className="bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-800 rounded-lg p-4 mb-6 flex items-start gap-3 not-prose">
+                              <span className="material-symbols-outlined text-red-500 mt-0.5">shield</span>
+                              <div className="flex-1">
+                                 <h4 className="text-red-800 dark:text-red-300 font-bold m-0 text-base">Sensitive Data Detected</h4>
+                                 <p className="text-red-700 dark:text-red-400 text-sm m-0 mt-1">
+                                    This letter contains contact details. Review them before saving or exporting. Use Edit Text to remove them from the text. They also remain visible in the original letter images included in the PDF.
+                                 </p>
+                                 <ul className="mt-3 mb-0 pl-0 list-none flex flex-wrap gap-2">
+                                    {sensitiveFindings.map((f, i) => (
+                                       <li key={`${f.type}-${i}`} className="m-0 inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white dark:bg-slate-800 border border-red-200 dark:border-red-800 text-xs text-slate-700 dark:text-slate-200">
+                                          <span className="font-semibold text-red-700 dark:text-red-400">{SENSITIVE_TYPE_LABELS[f.type]}:</span>
+                                          <span className="font-mono break-all">{f.value}</span>
+                                       </li>
+                                    ))}
+                                 </ul>
+                                 <label className="mt-3 flex items-center gap-2 text-sm font-medium text-red-800 dark:text-red-300 cursor-pointer">
+                                    <input
+                                       type="checkbox"
+                                       checked={sensitiveAcknowledged}
+                                       onChange={(e) => setSensitiveAcknowledged(e.target.checked)}
+                                       className="w-4 h-4 accent-red-600"
+                                    />
+                                    I have reviewed these details and confirm this letter can be saved and shared.
+                                 </label>
                               </div>
                            </div>
                         )}
