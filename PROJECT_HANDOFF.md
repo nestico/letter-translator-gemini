@@ -1,5 +1,5 @@
 # Letter Translator: Project Context & Status Handoff
-**Date:** April 10, 2026
+**Date:** April 10, 2026 (last updated October 5, 2026)
 
 This document captures the latest comprehensive context, resolved issues, and outstanding items for the Letter Translator application to ensure seamless maintenance and future engineering workflows.
 
@@ -8,7 +8,7 @@ This document captures the latest comprehensive context, resolved issues, and ou
 ## Section 1: Application Overview, Tech Stack, and File Map
 
 **What the app is:** 
-An AI-powered document transcription and translation portal built for the NGO "Children Believe." It allows regional operations teams to upload handwritten letters (from sponsored children in varying languages/scripts) and uses Google Gemini to generate highly literal, context-aware English translations formatted for PDF export to sponsors.
+An AI-powered document transcription and translation portal built for the NGO "Children Believe." It allows regional operations teams to upload handwritten letters (from sponsored children in varying languages/scripts) and uses Google Gemini to generate highly literal, context-aware translations formatted for PDF export. English is the default target; since October 2026 staff can also pick Spanish, French, Portuguese, Telugu, Tamil, Amharic, Afan Oromo or Tigrigna (e.g. a sponsor's English letter into Spanish). Translations are scanned for contact details before they can be saved or exported.
 
 **Tech Stack:**
 *   **Frontend:** React, TypeScript, Vite, Tailwind CSS
@@ -18,8 +18,10 @@ An AI-powered document transcription and translation portal built for the NGO "C
 *   **Export:** jsPDF + native browser File System Access API
 
 **Key File Map:**
-*   `components/TranslationView.tsx`: The core UI where image uploading, dual-pane translation comparison, and PDF generation occur.
-*   `api/translate.ts`: The Vercel serverless proxy endpoint containing the critical model routing, AI prompt logic, and golden reference retrieval.
+*   `components/TranslationView.tsx`: The core UI where image uploading, source/target language selection, dual-pane translation comparison, the sensitive data banner, and PDF generation occur.
+*   `api/translate.ts`: The Vercel serverless proxy endpoint containing the critical model routing, target-language allow-list, AI prompt logic, and golden reference retrieval.
+*   `services/sensitiveDataService.ts`: Detects emails, phone numbers, links and social media in letter text (flag only, never modifies text).
+*   `services/pdfFontService.ts`: Registers the Noto Sans font for a language's script and returns the font family to use in the PDF.
 *   `services/geminiService.ts`: Client-side wrapper managing compression and HTTP dispatch to the API.
 *   `services/imageUtils.ts`: Handles crucial client-side canvas compression logic.
 *   `REMEDIATION_PLAN.md`: The active source of truth for pending security and code-quality tasks.
@@ -48,23 +50,33 @@ We successfully triaged, investigated, and deployed fixes for 9 major issues spa
 
 ---
 
-## Section 3: The 10 Outstanding Remediation Items
+## Section 3: Outstanding Items (as of October 5, 2026)
 
-Only Medium and Informational items remain pending from the security review matrix (`REMEDIATION_PLAN.md`):
-
-**Medium Priority:**
-*   **M-1:** Apply `user.isAdmin` permission gate on the global Analytics dashboard.
-*   **M-2:** Sever the Supabase client initialization from using string placeholder fallbacks so it fails loudly on configuration drift.
-*   **M-3:** Fortify `generateWithRetry` in `translate.ts` to throw properly if the final attempt loop exhausts, mitigating undefined UI crashes.
-*   **M-4:** Implement safer `try/catch` wrapping around the Gemini JSON truncation-recovery string appender.
-*   **M-5:** Codify the missing `headerInfo` node directly within the `TranslationResult` TypeScript schema inside `types.ts`.
+All Critical, High and Medium items (C-1/2, H-1 to H-4, M-1 to M-5) and the P1 Supabase RLS audit are resolved. See `REMEDIATION_PLAN.md` for details and commits.
 
 **Informational / Improvements:**
-*   **I-1:** Inject strict Rate Limiting into `api/translate.ts` limits.
-*   **I-2:** Setup Content Security Policy (CSP) headers protecting from XSS injections.
-*   **I-3:** Transition Tailwind CSS off runtime CDN compilation towards a locally built Vite integration. 
-*   **I-4:** Deprecate/purged unused `translateImage` leftovers inside `azureService.ts`.
-*   **I-5:** Implement an automated model health check ping to ensure Google's preview models persist before routing traffic.
+*   **I-1:** Rate limiting on `api/translate.ts`.
+*   **I-2:** Content Security Policy (CSP) headers in `vercel.json`.
+*   **I-3:** Move Tailwind CSS off the runtime CDN to a locally built Vite integration.
+*   **I-4:** Azure services kept intentionally for future use; `ocrService.ts` is dead code.
+*   **I-5:** Automated model health check to catch Google model deprecations early.
+
+**Child Safeguarding follow-ups (sensitive data):**
+*   **CS-2:** Contact details remain visible in the original letter images embedded in the PDF.
+*   **CS-3:** Details written out in words are not detected (possible AI-assisted detection).
+*   **CS-4:** Optional auto-redaction, to be decided after staff use flag & warn.
+
+**Product follow-ups:**
+*   Curate golden references for non-English targets (current ones are native → English only).
+*   Verify Tamil/Telugu PDF output when they are the target language (see Gotcha 7).
+*   ChatBot decision, `TranslationView.tsx` decomposition, root directory cleanup.
+
+---
+
+## Section 3b: October 2026 Features
+
+1.  **Bidirectional Translation** (`ad67d9e`): The confirmation modal now has an active Target Language dropdown. `api/translate.ts` validates the target against `ALLOWED_TARGET_LANGUAGES`, writes it into the prompt, routes to Gemini Pro when the source **or** target is a complex script, and filters golden references by `target_language` for non-English targets. The PDF renders the translation in the target language's font. Tigrigna now uses the Ethiopic font.
+2.  **Sensitive Data Flag & Warn** (`3033f81`): After translation, the browser scans the edited transcription and translation for contact details. A red "Sensitive Data Detected" banner lists them, and Save/Export stay disabled until staff tick a review confirmation. Removing the details via Edit Text clears the banner.
 
 ---
 
@@ -88,12 +100,15 @@ Only Medium and Informational items remain pending from the security review matr
 
 ---
 
-## Section 6: The 5 Critical Gotchas (Lessons Learned)
+## Section 6: The Critical Gotchas (Lessons Learned)
 
 For anyone stepping into this codebase, observe the following landmines:
 
-1.  **Google Model Deprecation:** Google routinely nukes experimental `-preview` variants of their models. Always ensure the API layer maintains a `try/catch` fallback switch that routes to the GA stable variant (`gemini-2.0-flash`) or the platform will abruptly crash.
+1.  **Google Model Deprecation:** Google routinely retires `-preview` variants, and even GA models (`gemini-2.0-flash` was shut down June 1, 2026). Always keep the `try/catch` fallback in `api/translate.ts` pointing at a current GA model (currently `gemini-3.5-flash`, with `gemini-3.1-flash-lite` as the standard fallback) or the platform will abruptly return 404s.
 2.  **The JavaScript Date Shift:** Calling `new Date("2026-04-10")` in North American timezones instantly mutates to `2026-04-09` under the hood because JS parses YYYY-MM-DD as strict UTC, then snaps it backward into negative local offsets. Always forcibly append UTC notation or map dates manually.
 3.  **Analytics Sourcing:** Never tally metrics off of "Activity Event" tables. They inevitably get truncated or skipped. Deep aggregations must read pure materialized records coming from the `translations` baseline table. 
 4.  **The Image Compression Dilemma:** Vercel functions have a hard 4.5MB request body size cap. However, if client-side Canvas compression limits are dialed down too sharply, foreign scripts (Tamil looping characters) lose pixel data and the OCR will hallucinate entirely incorrect meanings. Balance is critical.
 5.  **Dynamic Golden References (Few-Shot):** The core intelligence of the app requires pulling "Golden" or Ground-Truth references from Supabase dynamically and injecting them into the Gemini generation prompt. LLMs natively struggle with literal dialect extraction without these specific few-shot anchors guiding them.
+6.  **Two Target-Language Lists:** The allowed targets live in both `api/translate.ts` (`ALLOWED_TARGET_LANGUAGES`) and `components/TranslationView.tsx` (`TARGET_LANGUAGES`). Adding a language to only one breaks it: the UI shows it but the server rejects it, or vice versa. A new non-Latin target also needs a font in `public/fonts` and a branch in `pdfFontService.ts`.
+7.  **jsPDF and Complex Scripts:** jsPDF does not perform full glyph shaping, so Tamil and Telugu text in a PDF may show some characters in the wrong form even with the correct Noto font. This matters most now that these can be **target** languages. Check a real export before relying on it.
+8.  **Sensitive Data Detection is Text-Only:** The flag & warn check reads the transcription and translation, not the images. Phone detection is tuned to avoid dates, Child IDs and amounts, so 8-digit local numbers are only flagged with a "+" prefix or a nearby phone keyword.

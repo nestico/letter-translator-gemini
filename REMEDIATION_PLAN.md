@@ -1,7 +1,7 @@
 # 🔍 Project Security Audit & Remediation Plan
 **Letter Translator — Full Code Review**
 **Audit Date:** March 24, 2026 | **Reviewed by:** Claude (Antigravity)
-**Last Updated:** June 29, 2026
+**Last Updated:** October 5, 2026
 
 ---
 
@@ -176,5 +176,26 @@ Full audit run via Supabase MCP against project `kywdelvillnpiazzwsyy`. Three vu
 
 ---
 
+## 🛡️ October 5, 2026 — Security Notes for New Features
+
+**1. Bidirectional translation — target language input hardening** (commit `ad67d9e`)
+- `targetLanguage` from the request body is now interpolated into the Gemini prompt. To prevent prompt injection it is checked against `ALLOWED_TARGET_LANGUAGES` in `api/translate.ts`; anything else returns `400`.
+- Same-language pairs (e.g. `(CAN) English` → `English`) are rejected server-side as well as in the UI.
+- The allow-list is duplicated as `TARGET_LANGUAGES` in `components/TranslationView.tsx`. Both must be kept in sync.
+
+**2. Child safeguarding — sensitive data flag & warn** (commit `3033f81`)
+- New `services/sensitiveDataService.ts` detects emails, phone numbers, web links and social media handles/apps in the transcription and translation.
+- `TranslationView.tsx` shows a "Sensitive Data Detected" banner and disables **Approve & Save** and **Export PDF** until staff confirm review. The check re-runs on edited text.
+- This is a client-side review aid, not an enforcement control. The detector only flags; it never changes text.
+
+| # | Issue | Severity | Status | Files |
+|---|-------|----------|--------|-------|
+| CS-1 | Contact details in letters reach sponsors/children unreviewed | 🟡 Medium | ✅ Mitigated — flag & warn (Oct 5) | `services/sensitiveDataService.ts`, `components/TranslationView.tsx` |
+| CS-2 | Contact details remain visible in original letter images in the PDF | 🔵 Info | ⏳ Pending — options: blur regions, or omit original pages for flagged letters | `components/TranslationView.tsx` |
+| CS-3 | Contact details written out in words (e.g. "nine eight seven…") are not detected | 🔵 Info | ⏳ Pending — option: AI-assisted detection in the Gemini prompt | `api/translate.ts` |
+| CS-4 | Optional auto-redaction of detected details | 🔵 Info | ⏳ Pending — decide after flag & warn usage feedback | `services/sensitiveDataService.ts` |
+
+---
+
 > [!NOTE]
-> **Open items as of June 29, 2026:** I-1 (rate limiting), I-2 (CSP headers), I-3 (Tailwind CDN → PostCSS), I-5 (model health check). P2 items from project_review.md: ChatBot decision, TranslationView decomposition, root directory cleanup.
+> **Open items as of October 5, 2026:** I-1 (rate limiting), I-2 (CSP headers), I-3 (Tailwind CDN → PostCSS), I-5 (model health check), CS-2 to CS-4 (sensitive data follow-ups). P2 items from project_review.md: ChatBot decision, TranslationView decomposition, root directory cleanup.

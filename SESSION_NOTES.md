@@ -767,3 +767,49 @@ ew Date() for display. Use Month Day, Year format from the AI directly.
 | P3 | Clean root directory / move planning docs | P3 |
 | P3 | Replace remaining `any` types | P3 |
 | P3 | Add SEO meta tags to `index.html` | P3 |
+
+# Session Notes — October 5, 2026
+
+### 53. Bidirectional Translation + Sensitive Data Flag & Warn
+
+#### Feature 1: Selectable Target Language (commit `ad67d9e`)
+- **Request:** Translate in both directions, e.g. upload an English sponsor letter and choose Spanish as the target. Previously every letter was translated into English only.
+- **Before:** The UI already sent `targetLanguage`, but the dropdown was disabled and locked to English, and `api/translate.ts` ignored the value. The prompt hard-coded English in three places.
+- **After:**
+  - `TranslationView.tsx`: Target dropdown enabled with `TARGET_LANGUAGES` = English (default), Spanish, French, Portuguese, Telugu, Tamil, Amharic, Afan Oromo, Tigrigna. Same-language pairs show a red warning and disable "Confirm & Translate".
+  - `api/translate.ts`: `targetLanguage` validated against `ALLOWED_TARGET_LANGUAGES` (prevents prompt injection) and same-language pairs return 400. The prompt now names the target language, notes that letters may go sponsor → child, and the system judge checks the output is in the target language.
+  - Model routing: Gemini 3.1 Pro is used when the source **or** target is Tamil, Telugu, Amharic or Tigrigna.
+  - Golden references: unchanged for English targets. For other targets, also filtered on `target_language`, so they only apply to matching pairs.
+  - `pdfFontService.ts`: `registerFontsForLanguage` now returns the font family; the PDF renders the translation with the **target** language's font. Tigrigna added to the Ethiopic font.
+- **Known limitations:** PDF labels and dates stay in English. jsPDF may not shape Tamil/Telugu glyphs perfectly when they are the target. No golden references exist yet for non-English targets.
+
+#### Feature 2: Sensitive Data Flag & Warn (commit `3033f81`)
+- **Request:** Check uploaded letters for sensitive data such as emails and phone numbers. Previously there was no detection; contact details flowed into the translation, history and PDF unchanged.
+- **New file `services/sensitiveDataService.ts`:** Detects emails, phone numbers, web links (URLs and bare domains), `@handles`, and social app names (WhatsApp, Facebook, Instagram, etc.). Flag only, never modifies text.
+  - Phones: 9–15 digits always flagged; 8-digit local numbers only with a "+" prefix or a nearby keyword (phone, celular, téléphone, etc.).
+  - Ignored: dates, the letter's Child ID / export file name, amounts, and `childrenbelieve.ca` / `childrenbelieve.org`.
+- **`TranslationView.tsx`:** Detection runs on the edited result via `useMemo`. A red "Sensitive Data Detected" banner lists each finding with a review checkbox. Approve & Save and Export PDF are disabled until it is ticked. New or changed findings reset the confirmation; removing the details via Edit Text clears the banner.
+- **Testing:** 10 sample texts checked (contact details, international numbers, links, handles, Children Believe domains, dates/IDs/amounts, a clean letter). All gave the expected result. Build and type-check clean. Not yet tested in production with a real letter.
+- **Follow-ups (REMEDIATION_PLAN CS-2 to CS-4):** details remain visible in the letter images in the PDF; details written out in words are not detected; optional auto-redaction.
+
+#### Deployment
+- Both features pushed straight to `main` (production) at the user's request; there is no test environment. Rollback: `git revert <commit>` then `git push`.
+
+#### Documentation Updated
+- README, PRD, ARCHITECTURE_DIAGRAM, PROJECT_HANDOFF and REMEDIATION_PLAN updated for both features.
+- Replaced outdated `gemini-2.0-flash` references with the current models, and corrected the README setup step that told developers to use a browser-exposed `VITE_GEMINI_API_KEY` (the key is server-side `GEMINI_API_KEY`).
+
+#### Current Open Items (as of October 5, 2026)
+| # | Issue | Priority |
+|---|-------|----------|
+| I-1 | Rate limiting on `/api/translate` | Improvement |
+| I-2 | CSP headers in `vercel.json` | Improvement |
+| I-3 | Bundle Tailwind locally (remove CDN) | Improvement |
+| I-5 | Model health check on app startup | Improvement |
+| CS-2 | Contact details visible in letter images in PDF | Improvement |
+| CS-3 | Detect contact details written out in words | Improvement |
+| CS-4 | Optional auto-redaction | Improvement |
+| — | Golden references for non-English targets | Product |
+| P2 | ChatBot: complete with Gemini or hide | P2 |
+| P2 | Decompose `TranslationView.tsx` | P2 |
+| P3 | Clean root directory / move planning docs | P3 |
