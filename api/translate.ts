@@ -45,7 +45,16 @@ const LANGUAGE_SPECIFIC_RULES = {
     }
 };
 
-const generateWithRetry = async (model: any, contentParts: any[], retries = 3, initialDelay = 2000) => {
+// Allowed target languages. Must stay in sync with TARGET_LANGUAGES in components/TranslationView.tsx.
+// Whitelisted so the value can be safely interpolated into the prompt.
+const ALLOWED_TARGET_LANGUAGES = [
+    "English", "Spanish", "French", "Portuguese",
+    "Telugu", "Tamil", "Amharic", "Afan Oromo", "Tigrigna"
+];
+
+const COMPLEX_SCRIPT_LANGUAGES = ['tigrigna', 'amharic', 'telugu', 'tamil'];
+
+const generateWithRetry =async (model: any, contentParts: any[], retries = 3, initialDelay = 2000) => {
     for (let i = 0; i < retries; i++) {
         try {
             console.log(`[Gemini] Attempt ${i + 1} for content generation...`);
@@ -102,6 +111,7 @@ export default async function handler(req: any, res: any) {
         }
 
         const { images, sourceLanguage } = req.body;
+        const targetLanguage: string = req.body.targetLanguage || 'English';
         const apiKey = process.env.GEMINI_API_KEY;
 
         if (!apiKey) {
@@ -112,7 +122,17 @@ export default async function handler(req: any, res: any) {
             return res.status(400).json({ error: 'No images provided for translation.' });
         }
 
+        if (!ALLOWED_TARGET_LANGUAGES.includes(targetLanguage)) {
+            return res.status(400).json({ error: `Unsupported target language: ${String(targetLanguage).substring(0, 40)}` });
+        }
+
         const lowerLang = (sourceLanguage || '').toLowerCase();
+        const lowerTarget = targetLanguage.toLowerCase();
+        const isEnglishTarget = targetLanguage === 'English';
+
+        if (lowerLang !== 'auto-detect' && lowerLang.includes(lowerTarget)) {
+            return res.status(400).json({ error: `Source and target language are both ${targetLanguage}. Please choose a different target language.` });
+        }
 
         // Model routing: Updated June 2026
         // - gemini-3.1-pro-preview: Best for dense non-Latin scripts (Tamil, Telugu, Amharic, Tigrigna)
@@ -130,15 +150,15 @@ export default async function handler(req: any, res: any) {
             }
         };
 
-        const isComplexLanguage = lowerLang.includes('tigrigna') ||
-            lowerLang.includes('amharic') ||
-            lowerLang.includes('telugu') ||
-            lowerLang.includes('tamil');
+        // Use the stronger model when either reading OR writing a complex script
+        const isComplexLanguage = COMPLEX_SCRIPT_LANGUAGES.some(l =>
+            lowerLang.includes(l) || lowerTarget.includes(l)
+        );
 
         const activeModelChain = isComplexLanguage ? MODEL_CONFIG.complex : MODEL_CONFIG.standard;
         let activeModelName = activeModelChain.primary;
 
-        console.log(`[Gemini API] Primary Target: ${activeModelName} | Language: ${sourceLanguage} | Pages: ${images.length}`);
+        console.log(`[Gemini API] Primary Target: ${activeModelName} | ${sourceLanguage} -> ${targetLanguage} | Pages: ${images.length}`);
 
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
@@ -189,18 +209,26 @@ export default async function handler(req: any, res: any) {
                 const sb = createClient(sbUrl, sbKey, {
                     global: { headers: { Authorization: `Bearer ${token}` } }
                 });
-                const { data: goldenRefs, error: dbErr } = await sb
+                let goldenQuery = sb
                     .from('translations')
                     .select('transcription, translation')
                     .eq('is_golden', true)
-                    .eq('source_language', sourceLanguage)
+                    .eq('source_language', sourceLanguage);
+
+                // Existing golden references are all native -> English. Only filter on
+                // target_language for other directions so the English flow is unchanged.
+                if (!isEnglishTarget) {
+                    goldenQuery = goldenQuery.eq('target_language', targetLanguage);
+                }
+
+                const { data: goldenRefs, error: dbErr } = await goldenQuery
                     .order('created_at', { ascending: false })
                     .limit(2);
 
                 if (!dbErr && goldenRefs && goldenRefs.length > 0) {
                     goldenReferencePrompt = "\n\n**GOLDEN REFERENCE EXAMPLES (FOLLOW THIS STYLE)**:\n";
                     goldenRefs.forEach((ref: any, idx: number) => {
-                        goldenReferencePrompt += `Example ${idx + 1}:\n- NATIVE: ${ref.transcription}\n- CORRECT ENGLISH: ${ref.translation}\n\n`;
+                        goldenReferencePrompt += `Example ${idx + 1}:\n- ORIGINAL: ${ref.transcription}\n- CORRECT ${targetLanguage.toUpperCase()}: ${ref.translation}\n\n`;
                     });
                 }
             }
@@ -211,10 +239,13 @@ export default async function handler(req: any, res: any) {
         const prompt = `
   You are an expert ${rules.role}.
 
-  **CONTEXT**: This is a sponsorship letter from a child to their sponsor.
+  **TASK**: Transcribe the handwritten letter in its original language, then translate it into **${targetLanguage}**.
+
+  **CONTEXT**: This is a child sponsorship letter. It is usually from a child to their sponsor, but it may also be from a sponsor to a child.
   1. **The Header**: Usually contains "Child Name", "Child ID", and "Written by" (the Scribe).
   2. **The Scribe**: If "Written by: Swapna" is listed, and the child is "Rapuri Srivalli", then Swapna is writing on behalf of Srivalli. Swapna might be an older sister, parent, or volunteer.
   3. **The Voice**: The translation should be in the FIRST PERSON of the letter's speaker.
+  4. **Target Language**: Write the translation entirely in ${targetLanguage}, using its native script and natural everyday wording the reader will understand. Keep personal names and place names as written.
 
   **INSTRUCTIONS**:
   1. **Read ALL Images**: Analyze up to 3 images as ONE continuous letter.
@@ -222,7 +253,7 @@ export default async function handler(req: any, res: any) {
   3. **ABSOLUTE REPETITION BAN**: Do NOT repeat the exact same paragraph or large blocks of text multiple times. If you detect a loop, break it and move to the next unique content.
   4. **No Redundancy**: If a "Dear Sponsor" greeting appears once, do not invent it again for subsequent pages.
   5. **FINAL SIGNATURE TERMINATION**: Only conclude the translation when you reach the final signature/closing of the ENTIRE document (usually on the last page). Do not stop if a name appears mid-letter.
-  6. **SYSTEM JUDGE**: Before finalizing the JSON, verify: "Did I include details from every image? Did I repeat paragraphs? Is the text non-English?".
+  6. **SYSTEM JUDGE**: Before finalizing the JSON, verify: "Did I include details from every image? Did I repeat paragraphs? Is any part of the translation NOT in ${targetLanguage}?".
   7. **TERMINATION**: Append the hidden token "END_OF_TRANSLATION" at the very end of your translation field content.
 
   ${goldenReferencePrompt}
@@ -234,7 +265,7 @@ export default async function handler(req: any, res: any) {
   {
     "headerInfo": { "childId": "...", "childName": "...", "date": "..." }, // IMPORTANT: "date" MUST be in English as "Month Day, Year" format (e.g. "March 15, 2026"). If the full day AND month AND year are NOT all clearly visible on the letter (e.g. only a year like "2026" is found, or no date at all), return exactly the string "null". Do NOT invent or assume a month or day.
     "transcription": "...",
-    "translation": "English Only Text...",
+    "translation": "${targetLanguage} Only Text...",
     "detectedLanguage": "...",
     "confidenceScore": 0.9
   }

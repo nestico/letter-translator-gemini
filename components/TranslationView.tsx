@@ -47,6 +47,15 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
       'Auto-Detect', '(NIC) spanish', '(BFA) French', '(CAN) English', '(IND) Telugu', '(IND) Tamil', '(ETH) Amharic', '(ETH) Afan Oromo', '(ETH) Tigrigna', '(HND) Spanish', '(PRY) Spanish', 'German', 'Italian', '(BRA) Portuguese', 'Latin', 'Dutch', 'Russian', 'Chinese', 'Japanese'
    ];
 
+   // Must stay in sync with ALLOWED_TARGET_LANGUAGES in api/translate.ts
+   const TARGET_LANGUAGES = [
+      'English', 'Spanish', 'French', 'Portuguese', 'Telugu', 'Tamil', 'Amharic', 'Afan Oromo', 'Tigrigna'
+   ];
+
+   // True when the chosen source already is the target (e.g. "(CAN) English" -> "English")
+   const isSameLanguagePair = selectedLanguage !== 'Auto-Detect' &&
+      selectedLanguage.toLowerCase().includes(targetLanguage.toLowerCase());
+
    const handleProcessStart = () => {
       setShowLanguageConfirm(true);
    };
@@ -278,8 +287,8 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
             pdfDoc.text("Letter Translation", margin, y);
             y += 12;
 
-            // PREPARE FONTS FOR CONTENT
-            await registerFontsForLanguage(pdfDoc, editedResult.detectedLanguage || '');
+            // PREPARE FONTS FOR CONTENT — the PDF body is the translation, so use the target language's script
+            const translationFont = await registerFontsForLanguage(pdfDoc, targetLanguage);
 
             if (editedResult.headerInfo) {
                const idToDisplay = exportFileName.trim().replace(/\.[^/.]+$/, "") || 'N/A';
@@ -353,7 +362,7 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
             y += 15;
 
             pdfDoc.setFontSize(12);
-            pdfDoc.setFont("NotoSans", "normal");
+            pdfDoc.setFont(translationFont, "normal");
             pdfDoc.setTextColor(30);
 
             // Use the full translation without sanitization
@@ -847,16 +856,24 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                               <div className="relative">
                                  <select
                                     value={targetLanguage}
-                                    readOnly
-                                    disabled
-                                    className="w-full h-12 pl-4 pr-4 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg appearance-none text-slate-500 dark:text-slate-500 cursor-not-allowed outline-none"
+                                    onChange={(e) => setTargetLanguage(e.target.value)}
+                                    className="w-full h-12 pl-4 pr-10 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg appearance-none text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                                  >
-                                    <option value="English">English</option>
+                                    {TARGET_LANGUAGES.map(lang => (
+                                       <option key={lang} value={lang}>{lang}</option>
+                                    ))}
                                  </select>
-                                 {/* Dropdown arrow removed for read-only look */}
+                                 <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                                    expand_more
+                                 </span>
                               </div>
                            </div>
                         </div>
+                        {isSameLanguagePair && (
+                           <p className="text-sm text-red-600 dark:text-red-400 mt-2">
+                              The source and target language are the same. Please choose a different target language.
+                           </p>
+                        )}
                      </div>
 
                      <div className="flex items-center gap-3">
@@ -868,7 +885,8 @@ export const TranslationView: React.FC<TranslationViewProps> = ({ user, images, 
                         </button>
                         <button
                            onClick={handleProcessConfirmed}
-                           className="flex-1 h-12 rounded-lg bg-primary hover:bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2"
+                           disabled={isSameLanguagePair}
+                           className="flex-1 h-12 rounded-lg bg-primary hover:bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary"
                         >
                            Confirm & Translate
                            <span className="material-symbols-outlined text-[18px]">arrow_forward</span>

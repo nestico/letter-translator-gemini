@@ -20,10 +20,13 @@ export const loadFontAsBase64 = async (url: string): Promise<string> => {
 };
 
 /**
- * Registers necessary Noto Sans fonts based on the source language.
+ * Registers the Noto Sans font needed to render text in the given language.
  * This allows jsPDF to render non-ASCII characters in the exported PDF.
+ * Returns the font family name to pass to doc.setFont() for that text.
  */
-export const registerFontsForLanguage = async (doc: jsPDF, language: string) => {
+export const registerFontsForLanguage = async (doc: jsPDF, language: string): Promise<string> => {
+    let fontFamily = 'NotoSans';
+
     // Default fallback font (Noto Sans Latin)
     try {
         const latinBase64 = await loadFontAsBase64('/fonts/NotoSans-Regular.ttf');
@@ -42,6 +45,7 @@ export const registerFontsForLanguage = async (doc: jsPDF, language: string) => 
             doc.addFileToVFS('NotoSansTamil-Regular.ttf', tamilBase64);
             doc.addFont('NotoSansTamil-Regular.ttf', 'NotoSansTamil', 'normal');
             doc.setFont('NotoSansTamil');
+            fontFamily = 'NotoSansTamil';
         } catch (e) {
             console.warn('Failed to register Tamil font:', e);
         }
@@ -51,18 +55,22 @@ export const registerFontsForLanguage = async (doc: jsPDF, language: string) => 
             doc.addFileToVFS('NotoSansTelugu-Regular.ttf', teluguBase64);
             doc.addFont('NotoSansTelugu-Regular.ttf', 'NotoSansTelugu', 'normal');
             doc.setFont('NotoSansTelugu');
+            fontFamily = 'NotoSansTelugu';
         } catch (e) {
             console.warn('Failed to register Telugu font:', e);
         }
-    } else if (lang.includes('amharic')) {
+    } else if (lang.includes('amharic') || lang.includes('tigrigna')) {
         try {
             const ethiopicBase64 = await loadFontAsBase64('/fonts/NotoSansEthiopic-Regular.ttf');
             doc.addFileToVFS('NotoSansEthiopic-Regular.ttf', ethiopicBase64);
             doc.addFont('NotoSansEthiopic-Regular.ttf', 'NotoSansEthiopic', 'normal');
             doc.setFont('NotoSansEthiopic');
+            fontFamily = 'NotoSansEthiopic';
         } catch (e) {
-            console.warn('Failed to register Ethiopic font for Amharic:', e);
+            console.warn('Failed to register Ethiopic font:', e);
         }
     }
     // Note: Afan Oromo uses Latin script, so it's covered by the default NotoSans Latin font.
+
+    return fontFamily;
 };
